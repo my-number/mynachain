@@ -1,9 +1,7 @@
-FROM debian:buster-slim
+FROM rust:1-slim-buster
 
-RUN apt-get update && apt-get upgrade && apt-get install git curl build-essential -y
+RUN apt-get update && apt-get upgrade && apt-get install git -y
 
-RUN curl https://sh.rustup.rs -sSf | sh && rustup default stable
-RUN ENV PATH $PATH:/root/.cargo/bin
 RUN rustup install nightly && rustup target add wasm32-unknown-unknown --toolchain nightly
 RUN cargo +nightly install --git https://github.com/alexcrichton/wasm-gc --force
 
