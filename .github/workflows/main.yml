@@ -1,0 +1,33 @@
+name: Build Node
+
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Cache
+      uses: actions/cache@v1.0.3
+      with:
+        # A directory to store and save the cache
+        path: target
+        # An explicit key for restoring and saving the cache
+        key: Build cache
+    - uses: raftario/setup-rust-action@v1.0.0
+    - name: Install Rust WASM build environment
+      run: |
+        rustup default stable
+        rustup install nightly
+        rustup target add wasm32-unknown-unknown --toolchain nightly
+        cargo +nightly install --git https://github.com/alexcrichton/wasm-gc --force
+    - name:  Build
+      run: |
+        cargo build --release
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: target dir
+        path: target/release/mynachain
