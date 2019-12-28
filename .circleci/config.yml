@@ -13,7 +13,7 @@ jobs:
       - run:
           name: "Install dependency"
           command: |
-            sudo apt-get install build-essential
+            sudo apt-get install build-essential libclang-dev
       - run:
           name: "Install Rust WASM build environment"
           command: |
