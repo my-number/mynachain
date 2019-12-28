@@ -32,6 +32,7 @@ jobs:
       - run:
           name: "Build"
           command: "cargo build"
+          no_output_timeout: 1h
       - save_cache:
           key: build-cache-{{ checksum 'Cargo.lock'}}
           paths: ./target
