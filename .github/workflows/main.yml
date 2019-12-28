@@ -34,8 +34,10 @@ jobs:
     - name:  Build
       run: |
         cargo build --release
+    - name: Move executable to make cache smaller
+      run: mv target/release/node-template .
     - name: Upload artifact
       uses: actions/upload-artifact@v1.0.0
       with:
         name: target dir
-        path: target/release/node-template
+        path: ./node-template

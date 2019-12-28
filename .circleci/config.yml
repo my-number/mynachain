@@ -1,0 +1,72 @@
+version: 2.1
+
+orbs:
+  aws-ecr: circleci/aws-ecr@0.0.2
+  aws-ecs: circleci/aws-ecs@0.0.10
+jobs:
+  build:
+    working_directory: ~/mynachain
+    docker:
+      - image: circleci/rust:1-slim-buster
+    steps:
+      - checkout
+      - run:
+        name: "Install Rust WASM build environment"
+        command: |
+          rustup default stable
+          rustup install nightly
+          rustup target add wasm32-unknown-unknown --toolchain nightly
+          cargo +nightly install --git https://github.com/alexcrichton/wasm-gc --force
+      - restore_cache:
+        key: registry-cache-{{ checksum 'Cargo.lock'}}
+      - restore_cache:
+        key: index-cache-{{ checksum 'Cargo.lock'}}
+      - restore_cache:
+        key: build-cache-{{ checksum 'Cargo.lock'}}
+      - run:
+        name: "Build"
+        command: "cargo build"
+      - save_cache:
+        key: build-cache-{{ checksum 'Cargo.lock'}}
+        path: ./target
+      - save_cache:
+        key: index-cache-{{ checksum 'Cargo.lock'}}
+        path: ~/.cargo/git
+      - save_cache:
+        key: build-cache-{{ checksum 'Cargo.lock'}}
+        path: ~/.cargo/registry
+      - save_cache:
+        key: repo-cache-{{ .Environment.CIRCLE_SHA1 }}
+        path: ./
+      - store_artifacts:
+        path: target/debug/node-template
+        prefix: binary
+  test:
+    working_directory: ~/mynachain
+    docker:
+      - image: circleci/rust:1-slim-buster
+    steps:
+      - restore_cache:
+        key: repo-cache-{{ .Environment.CIRCLE_SHA1 }}
+      - run:
+        name: "unit test"
+        run: cargo test
+  push_to_ecr:
+    working_directory: ~/mynachain
+    docker:
+      - image: circleci/rust:1-slim-buster
+    steps:
+      - restore_cache:
+        key: repo-cache-{{ .Environment.CIRCLE_SHA1 }}
+      - setup_remote_docker
+      - run:
+        name: "Build docker"
+        command: |
+          curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          $(aws ecr get-login --no-include-email --region us-east-1)
+          docker build -t $AWS_RESOURCE_NAME_PREFIX .
+          docker tag mynachain:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:latest
+          docker tag mynachain:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:$CIRCLE_SHA1
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:$CIRCLE_SHA1

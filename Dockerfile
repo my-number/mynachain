@@ -1,14 +1,11 @@
-FROM rust:1-slim-buster
+FROM debian:buster-slim
 
 RUN apt-get update && apt-get upgrade && apt-get install git -y
 
-RUN rustup install nightly && rustup target add wasm32-unknown-unknown --toolchain nightly
-RUN cargo +nightly install --git https://github.com/alexcrichton/wasm-gc --force
+ADD ./node-template ./node-template
 
-ADD . mynachain
-WORKDIR mynachain
-RUN cargo build --release
+RUN chmod -x ./node-template
 
 EXPOSE 9944
 
-CMD ["bash"]
+CMD ["./node-template"]
