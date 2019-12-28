@@ -11,6 +11,10 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Install dependency"
+          command: |
+            apt-get install build-essential
+      - run:
           name: "Install Rust WASM build environment"
           command: |
             rustup default stable
