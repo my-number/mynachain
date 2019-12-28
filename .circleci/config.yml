@@ -7,7 +7,7 @@ jobs:
   build:
     working_directory: ~/mynachain
     docker:
-      - image: circleci/rust:1-slim-buster
+      - image: circleci/rust:latest
     steps:
       - checkout
       - run:
@@ -44,7 +44,7 @@ jobs:
   test:
     working_directory: ~/mynachain
     docker:
-      - image: circleci/rust:1-slim-buster
+      - image: circleci/rust:latest
     steps:
       - restore_cache:
           key: repo-cache-{{ .Environment.CIRCLE_SHA1 }}
@@ -54,7 +54,7 @@ jobs:
   push_to_ecr:
     working_directory: ~/mynachain
     docker:
-      - image: circleci/rust:1-slim-buster
+      - image: circleci/rust:latest
     steps:
       - setup_remote_docker
       - restore_cache:
