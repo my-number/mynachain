@@ -51,7 +51,7 @@ jobs:
         unzip awscliv2.zip
         sudo ./aws/install
         $(aws ecr get-login --no-include-email --region us-east-1)
-    - name: push
+    - name: build
       run: |
         docker build -t $AWS_RESOURCE_NAME_PREFIX .
         docker tag mynachain:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:latest

@@ -15,7 +15,7 @@ jobs:
           command: |
             sudo apt-get update
             sudo apt-get upgrade
-            sudo apt-get install cmake pkg-config libssl-dev build-essential git clang libclang-dev llvm-config -y 
+            sudo apt-get install cmake pkg-config libssl-dev build-essential git clang libclang-dev -y 
       - run:
           name: "Install Rust WASM build environment"
           command: |
