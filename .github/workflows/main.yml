@@ -45,15 +45,19 @@ jobs:
     - name: test
       run: |
         cargo test
-    - name: login
-      run: |
-        curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install
-        $(aws ecr get-login --no-include-email --region us-east-1)
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
     - name: build
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPO_NAME }}
       run: |
-        docker build -t $AWS_RESOURCE_NAME_PREFIX .
-        docker tag mynachain:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:latest
-        docker tag mynachain:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:$CIRCLE_SHA1
-        docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:$GITHUB_SHA
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
