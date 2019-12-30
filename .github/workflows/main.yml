@@ -33,7 +33,7 @@ jobs:
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
     - name:  Build
       run: |
-        cargo build --release
+        cargo build
     - name: Move executable to make cache smaller
       run: mv target/release/node-template .
 #    - name: Upload artifact
@@ -41,3 +41,17 @@ jobs:
 #      with:
 #        name: target dir
 #        path: ./node-template
+
+    - name: test
+      run: |
+        cargo test
+    - name:
+      run: |
+        curl "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
+        $(aws ecr get-login --no-include-email --region us-east-1)
+        docker build -t $AWS_RESOURCE_NAME_PREFIX .
+        docker tag mynachain:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:latest
+        docker tag mynachain:latest $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:$CIRCLE_SHA1
+        docker push $AWS_ACCOUNT_ID.dkr.ecr.ap-northeast-1.amazonaws.com/$AWS_RESOURCE_NAME_PREFIX:$GITHUB_SHA
