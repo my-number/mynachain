@@ -4,7 +4,7 @@ RUN apt-get update && apt-get upgrade && apt install -y cmake pkg-config libssl-
 
 ADD ./node-template ./node-template
 
-RUN chmod -x ./node-template
+RUN chmod +x ./node-template
 
 EXPOSE 9944
 
