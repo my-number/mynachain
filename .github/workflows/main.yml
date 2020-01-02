@@ -36,12 +36,11 @@ jobs:
         cargo build
     - name: Move executable to make cache smaller
       run: mv target/debug/node-template .
-   - name: Upload artifact
-     uses: actions/upload-artifact@v1.0.0
-     with:
-       name: target dir
-       path: ./node-template
-
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: target dir
+        path: ./node-template
     - name: test
       run: |
         cargo test
