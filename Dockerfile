@@ -8,4 +8,4 @@ RUN chmod +x ./node-template
 
 EXPOSE 9944
 
-CMD ["./node-template"]
+CMD ["./node-template", "--dev", "--ws-external", "--rpc-external"]

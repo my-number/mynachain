@@ -8,7 +8,13 @@ pub trait Trait: system::Trait {
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
-pub struct Account {}
+
+/// The struct of individual account
+pub struct Account<Hash> {
+    cert: Vec<u8>,
+    id: Hash,
+    initiator: Hash,
+}
 // This module's storage items.
 decl_storage! {
     trait Store for Module<T: Trait> as MynaChainModule {
@@ -16,6 +22,8 @@ decl_storage! {
         // Here we are declaring a StorageValue, `Something` as a Option<u32>
         // `get(fn something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
         Something get(fn something): Option<u32>;
+        AccountCount get(account_count): u64;
+        Accounts get(account): map T::Hash => Account<T::Hash>;
     }
 }
 
