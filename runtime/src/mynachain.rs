@@ -1,4 +1,8 @@
-use frame_support::{decl_event, decl_module, decl_storage, dispatch};
+use frame_support::{
+    decl_event, decl_module, decl_storage, dispatch,
+    dispatch::{Decode, Encode},
+};
+use sp_std::vec::Vec;
 use system::ensure_signed;
 
 /// The module's configuration trait.
@@ -10,6 +14,8 @@ pub trait Trait: system::Trait {
 }
 
 /// The struct of individual account
+#[derive(Encode, Decode, Default, Clone, PartialEq)]
+#[cfg_attr(feature = "std", derive(Debug))]
 pub struct Account<Hash> {
     cert: Vec<u8>,
     id: Hash,
