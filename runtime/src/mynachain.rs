@@ -1,9 +1,8 @@
 use frame_support::{
     decl_event, decl_module, decl_storage, dispatch,
-    dispatch::{Decode, Encode},
+    dispatch::{Decode, Encode, Vec},
 };
-use sp_std::vec::Vec;
-use system::ensure_signed;
+use frame_system::ensure_signed;
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
@@ -24,16 +23,17 @@ pub struct Account<Hash> {
 // This module's storage items.
 decl_storage! {
     trait Store for Module<T: Trait> as MynaChainModule {
-        // Just a dummy storage item.
-        // Here we are declaring a StorageValue, `Something` as a Option<u32>
-        // `get(fn something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
-        Something get(fn something): Option<u32>;
+
         AccountCount get(account_count): u64;
         Accounts get(account): map T::Hash => Account<T::Hash>;
     }
 }
+decl_event!(
+    pub enum Event<T>
+    where
+        AccountId = <T as system::Trait>::AccountId, {}
+);
 
-// The module's dispatchable functions.
 decl_module! {
     /// The module declaration.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -56,20 +56,22 @@ decl_module! {
             Self::deposit_event(RawEvent::SomethingStored(something, who));
             Ok(())
         }
+
+        pub fn create_account(origin, cert: Vec<u8>) -> dispatch::Result {
+            ensure_inherent(origin)?;
+            Self::insert_account(cert)?;
+            Ok(())
+        }
+
+        pub fn send(origin, balance: T::Balance, to: T::Hash ) -> dispatch::Result {
+
+        }
     }
 }
 
-decl_event!(
-    pub enum Event<T>
-    where
-        AccountId = <T as system::Trait>::AccountId,
-    {
-        // Just a dummy event.
-        // Event `Something` is declared with a parameter of the type `u32` and `AccountId`
-        // To emit this event, we call the deposit funtion, from our runtime funtions
-        SomethingStored(u32, AccountId),
-    }
-);
+impl<T: Trait> Module<T> {
+    pub fn insert_account(cert: Vec<u8>) -> dispatch::Result {}
+}
 
 /// tests for this module
 #[cfg(test)]
@@ -132,12 +134,8 @@ mod tests {
 
     #[test]
     fn it_works_for_default_value() {
-        new_test_ext().execute_with(|| {
-            // Just a dummy test for the dummy funtion `do_something`
-            // calling the `do_something` function with a value 42
-            assert_ok!(MynaChainModule::do_something(Origin::signed(1), 42));
-            // asserting that the stored value is equal to what we stored
-            assert_eq!(MynaChainModule::something(), Some(42));
-        });
+        new_test_ext().execute_with(|| {});
     }
 }
+
+// ensure_signedみたいに,ensure_accountみたいなの
