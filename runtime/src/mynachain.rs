@@ -2,7 +2,7 @@ use frame_support::{
     decl_event, decl_module, decl_storage, dispatch,
     dispatch::{Decode, Encode, Vec},
 };
-use frame_system::ensure_signed;
+use system::{ensure_none, ensure_signed};
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
@@ -28,12 +28,15 @@ decl_storage! {
         Accounts get(account): map T::Hash => Account<T::Hash>;
     }
 }
+
 decl_event!(
     pub enum Event<T>
     where
-        AccountId = <T as system::Trait>::AccountId, {}
+        AccountId = <T as system::Trait>::AccountId,
+    {
+        Success(AccountId),
+    }
 );
-
 decl_module! {
     /// The module declaration.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
@@ -41,36 +44,24 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
-        // Just a dummy entry point.
-        // function that can be called by the external world as an extrinsics call
-        // takes a parameter of the type `AccountId`, stores it and emits an event
-        pub fn do_something(origin, something: u32) -> dispatch::Result {
-            // TODO: You only need this if you want to check it was signed.
-            let who = ensure_signed(origin)?;
 
-            // TODO: Code to execute when something calls this.
-            // For example: the following line stores the passed in u32 in the storage
-            Something::put(something);
-
-            // here we are raising the Something event
-            Self::deposit_event(RawEvent::SomethingStored(something, who));
-            Ok(())
-        }
 
         pub fn create_account(origin, cert: Vec<u8>) -> dispatch::Result {
-            ensure_inherent(origin)?;
+            ensure_none(origin)?;
             Self::insert_account(cert)?;
             Ok(())
         }
 
-        pub fn send(origin, balance: T::Balance, to: T::Hash ) -> dispatch::Result {
-
+        pub fn send(origin, amount: u64, to: T::Hash ) -> dispatch::Result {
+            Ok(())
         }
     }
 }
 
 impl<T: Trait> Module<T> {
-    pub fn insert_account(cert: Vec<u8>) -> dispatch::Result {}
+    pub fn insert_account(cert: Vec<u8>) -> dispatch::Result {
+        Ok(())
+    }
 }
 
 /// tests for this module
