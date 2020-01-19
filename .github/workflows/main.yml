@@ -31,9 +31,9 @@ jobs:
       with:
         path: target
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-    - name:  Build
+    - name: Release Build
       run: |
-        cargo build
+        cargo build --release
     - name: Move executable to make cache smaller
       run: mv target/debug/node-template .
     - name: test
