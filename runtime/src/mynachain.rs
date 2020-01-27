@@ -6,7 +6,7 @@ use frame_support::{
 use system::{ensure_none, ensure_signed};
 
 /// The module's configuration trait.
-pub trait Trait: system::Trait {
+pub trait Trait: balance::Trait {
     // TODO: Add other types and constants required configure this module.
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -44,8 +44,6 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
-
-
         pub fn create_account(origin, cert: Vec<u8>) -> dispatch::Result {
             ensure_none(origin)?;
             Self::insert_account(cert)?;
@@ -54,8 +52,7 @@ decl_module! {
 
         pub fn send(origin, amount: u64, to: T::AccountId ) -> dispatch::Result {
             let sender = ensure_signed(origin)?;
-            //<balances::Module<<T as balance::Trait>> as Currency<_>>::transfer(&sender, &to,  amount, ExistenceRequirement::KeepAlive)
-            Ok(())
+            <balances::Module<T> as Currency<_>>::transfer(&sender, &to,  amount, ExistenceRequirement::KeepAlive)
         }
     }
 }
