@@ -54,7 +54,7 @@ decl_module! {
 
         pub fn send(origin, amount: u64, to: T::AccountId ) -> dispatch::Result {
             let sender = ensure_signed(origin)?;
-            <balances::Module<T as balance::Trait> as Currency<_>>::transfer(&sender, &to,  amount, ExistenceRequirement::KeepAlive)
+            <balances::Module<<T as balance::Trait>> as Currency<_>>::transfer(&sender, &to,  amount, ExistenceRequirement::KeepAlive)
         }
     }
 }
