@@ -1,7 +1,7 @@
 use frame_support::{
     decl_event, decl_module, decl_storage, dispatch,
     dispatch::{Decode, Encode, Vec},
-    traits::{Currency,ExistenceRequirement}
+    traits::{Currency, ExistenceRequirement},
 };
 use system::{ensure_none, ensure_signed};
 
@@ -50,9 +50,9 @@ decl_module! {
             Ok(())
         }
 
-        pub fn send(origin, amount: u64, to: T::AccountId ) -> dispatch::Result {
+        pub fn send(origin, amount: T::Balance, to: T::AccountId ) -> dispatch::Result {
             let sender = ensure_signed(origin)?;
-            <balances::Module<T> as Currency<_>>::transfer(&sender, &to,  <T as balances::Trait>::Balance::try_from(amount).unwrap(), ExistenceRequirement::KeepAlive)
+            <balances::Module<T> as Currency<_>>::transfer(&sender, &to,  amount, ExistenceRequirement::KeepAlive)
         }
     }
 }

@@ -189,7 +189,7 @@ impl timestamp::Trait for Runtime {
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: u128 = 500;
+    pub const ExistentialDeposit: u128 = 0;
     pub const TransferFee: u128 = 0;
     pub const CreationFee: u128 = 0;
 }
@@ -245,7 +245,7 @@ construct_runtime!(
 		Aura: aura::{Module, Config<T>, Inherent(Timestamp)},
 		Grandpa: grandpa::{Module, Call, Storage, Config, Event},
 		Indices: indices,
-		Balances: balances::{default, Error},
+		Balances: balances::{Module, Storage, Event<T>, Config<T>, Error},
 		TransactionPayment: transaction_payment::{Module, Storage},
 		Sudo: sudo,
 		// Used for the module template in `./mynachain.rs`
