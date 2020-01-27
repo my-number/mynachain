@@ -1,14 +1,13 @@
 use frame_support::{
     decl_event, decl_module, decl_storage, dispatch,
     dispatch::{Decode, Encode, Vec},
-    traits::{Currency}
+    traits::{Currency,ExistenceRequirement}
 };
 use system::{ensure_none, ensure_signed};
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
     // TODO: Add other types and constants required configure this module.
-    type Currency: Currency<Self::AccountId>;
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
@@ -55,7 +54,7 @@ decl_module! {
 
         pub fn send(origin, amount: u64, to: T::AccountId ) -> dispatch::Result {
             let sender = ensure_signed(origin)?;
-            T::Currency::transfer(sender, to,  amount)
+            <balances::Module<T> as Currency<_>>::transfer(sender, to,  amount, ExistenceRequirement::KeepAlive)
         }
     }
 }
