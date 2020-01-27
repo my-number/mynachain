@@ -6,7 +6,7 @@ use frame_support::{
 use system::{ensure_none, ensure_signed};
 
 /// The module's configuration trait.
-pub trait Trait: balance::Trait {
+pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
     /// The overarching event type.
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
