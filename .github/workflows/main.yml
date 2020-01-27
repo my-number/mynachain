@@ -6,7 +6,7 @@ on: [push]
 jobs:
   build:
 
-    runs-on: [self-hosted, ubuntu-latest]
+    runs-on: [self-hosted, linux]
     steps:
     - uses: actions/checkout@v1
     - uses: raftario/setup-rust-action@v1.0.0
