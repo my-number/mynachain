@@ -38,25 +38,14 @@ jobs:
       run: mv target/release/node-template .
     - name: test
       run: |
-        cargo test
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
+        cargo test --release
+    - name: Upload to S3
+      uses: jakejarvis/s3-sync-action@master
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-    - name: build
+        args: --acl public-read --follow-symlinks --delete
       env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPO_NAME }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
-    # - name: Upload artifact
-    #   uses: actions/upload-artifact@v1.0.0
-    #   with:
-    #     name: target dir
-    #     path: ./node-template
+        AWS_S3_BUCKET: mynachain
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-east-1'
+        SOURCE_DIR: 'target'
