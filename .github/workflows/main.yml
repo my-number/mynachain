@@ -13,7 +13,7 @@ jobs:
     - name: Install Rust WASM build environment
       run: |
         rustup default stable
-        rustup install nightly
+        rustup update nightly
         rustup target add wasm32-unknown-unknown --toolchain nightly
         cargo +nightly install --git https://github.com/alexcrichton/wasm-gc --force
     - name: Cache cargo registry
@@ -34,8 +34,6 @@ jobs:
     - name: Release Build
       run: |
         cargo build --release
-    - name: Move executable to make cache smaller
-      run: mv target/release/node-template .
     - name: test
       run: |
         cargo test --release
