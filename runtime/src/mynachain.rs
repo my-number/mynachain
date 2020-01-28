@@ -1,5 +1,5 @@
 use frame_support::{
-    decl_event, decl_module, decl_storage, dispatch,
+    decl_event, decl_module, decl_storage, dispatch, runtime_print
     dispatch::{Decode, Encode, Vec},
     traits::{Currency, ExistenceRequirement},
 };
@@ -52,7 +52,9 @@ decl_module! {
 
         pub fn send(origin, amount: T::Balance, to: T::AccountId ) -> dispatch::Result {
             let sender = ensure_signed(origin)?;
-            <balances::Module<T> as Currency<_>>::transfer(&sender, &to,  amount, ExistenceRequirement::KeepAlive)
+            let ret = <balances::Module<T> as Currency<_>>::transfer(&sender, &to,  amount, ExistenceRequirement::KeepAlive);
+            runtime_print!("send result: {}", ret);
+            ret
         }
     }
 }
