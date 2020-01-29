@@ -13,22 +13,28 @@ pub trait Trait: balances::Trait {
 }
 
 mod custom_types {
-    type AccountId = u64;
-    type Signature = [u8; 256];
+    use frame_support::dispatch::{Decode, Encode, Vec};
+    
+    pub type AccountId = u64;
+    pub type Signature = Vec<u8>;
+
+    /// The struct of individual account
+    #[derive(Encode, Decode, Default, Clone, PartialEq)]
+    #[cfg_attr(feature = "std", derive(Debug))]
     pub struct Account {
         cert: Vec<u8>,
         id: AccountId,
     }
-    type Balance = u64;
+    pub type Balance = u64;
+
+    #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
     pub struct SignedData {
         signature: Signature,
         id: AccountId,
     }
 }
 
-/// The struct of individual account
-#[derive(Encode, Decode, Default, Clone, PartialEq)]
-#[cfg_attr(feature = "std", derive(Debug))]
+
 
 // This module's storage items.
 decl_storage! {
@@ -78,7 +84,7 @@ impl<T: Trait> Module<T> {
     }
     pub fn ensure_rsa_signed(
         signed_data: custom_types::SignedData,
-    ) -> dispatch::Result<custom_types::AccountId> {
+    ) -> Result<custom_types::AccountId, &'static str> {
         Ok(0 as custom_types::AccountId)
     }
     pub fn transfer(
