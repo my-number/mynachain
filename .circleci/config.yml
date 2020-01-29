@@ -15,7 +15,7 @@ jobs:
           key: build-cache-{{ checksum 'Cargo.lock'}}
       - run:
           name: "Build"
-          command: "cargo build"
+          command: "cargo build --release"
           no_output_timeout: 1h
       - save_cache:
           key: build-cache-{{ checksum 'Cargo.lock'}}
@@ -30,7 +30,7 @@ jobs:
           key: repo-cache-{{ .Environment.CIRCLE_SHA1 }}
           paths: ./
       - store_artifacts:
-          path: target/debug/node-template
+          path: target/release/node-template
           prefix: binary
   test:
     working_directory: ~/mynachain
@@ -41,7 +41,7 @@ jobs:
           key: repo-cache-{{ .Environment.CIRCLE_SHA1 }}
       - run:
           name: "unit test"
-          command: cargo test
+          command: cargo test --release
 
 workflow:
   version: 2
@@ -51,6 +51,4 @@ workflow:
       - test:
         requires:
           - build
-      - push_to_ecr:
-        requires:
-          - build
+      
