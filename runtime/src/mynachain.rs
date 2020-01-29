@@ -1,5 +1,5 @@
 use frame_support::{
-    decl_event, decl_module, decl_storage, dispatch, runtime_print,
+    decl_event, decl_module, decl_storage, dispatch,
     dispatch::{Decode, Encode, Vec},
     traits::{Currency, ExistenceRequirement},
 };
@@ -12,20 +12,31 @@ pub trait Trait: balances::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
+mod custom_types {
+    type AccountId = u64;
+    type Signature = [u8; 256];
+    pub struct Account {
+        cert: Vec<u8>,
+        id: AccountId,
+    }
+    type Balance = u64;
+    pub struct SignedData {
+        signature: Signature,
+        id: AccountId,
+    }
+}
+
 /// The struct of individual account
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
-pub struct Account<Hash> {
-    cert: Vec<u8>,
-    id: Hash,
-    initiator: Hash,
-}
+
 // This module's storage items.
 decl_storage! {
     trait Store for Module<T: Trait> as MynaChainModule {
 
-        AccountCount get(account_count): u64;
-        Accounts get(account): map T::Hash => Account<T::Hash>;
+        AccountCount get(account_count): custom_types::AccountId;
+        Accounts get(account): map custom_types::AccountId => custom_types::Account;
+        Balance get(balance): map custom_types::AccountId => custom_types::Balance;
     }
 }
 
@@ -44,23 +55,37 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
-        pub fn create_account(origin, cert: Vec<u8>) -> dispatch::Result {
+        pub fn create_account(origin, cert: Vec<u8>, sig: custom_types::Signature) -> dispatch::Result {
             ensure_none(origin)?;
+            // check signed by cacert
+            // check cert by signature
             Self::insert_account(cert)?;
             Ok(())
         }
 
-        pub fn send(origin, amount: T::Balance, to: T::AccountId ) -> dispatch::Result {
-            let sender = ensure_signed(origin)?;
-            let ret = <balances::Module<T> as Currency<_>>::transfer(&sender, &to,  amount, ExistenceRequirement::KeepAlive);
-            runtime_print!("send result: {:?}", ret);
-            ret
+        pub fn send(origin, signed_data: custom_types::SignedData, to: custom_types::AccountId, amount: custom_types::Balance) -> dispatch::Result {
+            ensure_none(origin)?;
+            let from = Self::ensure_rsa_signed(signed_data)?;
+            Self::transfer(from,to, amount)?;
+            Ok(())
         }
     }
 }
 
 impl<T: Trait> Module<T> {
     pub fn insert_account(cert: Vec<u8>) -> dispatch::Result {
+        Ok(())
+    }
+    pub fn ensure_rsa_signed(
+        signed_data: custom_types::SignedData,
+    ) -> dispatch::Result<custom_types::AccountId> {
+        Ok(0 as custom_types::AccountId)
+    }
+    pub fn transfer(
+        from: custom_types::AccountId,
+        to: custom_types::AccountId,
+        amount: custom_types::Balance,
+    ) -> dispatch::Result {
         Ok(())
     }
 }
