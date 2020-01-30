@@ -125,10 +125,10 @@ impl<T: Trait> Module<T> {
         ensure!(Accounts::exists(to), "Account not found");
         
         let pre_bal_from = Balance::get(from);
-        let new_bal_from = pre_bal.checked_sub(amount).ok_or("overflow")?;
+        let new_bal_from = pre_bal_from.checked_sub(amount).ok_or("overflow")?;
 
         let pre_bal_to = Balance::get(to);
-        let new_bal_to = pre_bal.checked_add(amount).ok_or("overflow")?;
+        let new_bal_to = pre_bal_to.checked_add(amount).ok_or("overflow")?;
         Ok(())
     }
 
@@ -137,9 +137,9 @@ impl<T: Trait> Module<T> {
     ) -> dispatch::Result {
         ensure!(Accounts::exists(id), "Account not found");
         
-        let account = Account::get(id);
+        let account = Accounts::get(id);
         account.nonce +=1;
-        Account::insert(id, account);
+        Accounts::insert(id, account);
         
         Ok(())
     }
