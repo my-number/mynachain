@@ -102,7 +102,7 @@ impl<T: Trait> Module<T> {
     pub fn insert_account(cert: Vec<u8>) -> dispatch::Result {
         Self::check_ca(&cert)?;
         let new_id = <AccountCount>::get();
-        let new_account = custom_types::Account { cert, id: new_id };
+        let new_account = custom_types::Account { cert: cert, id: new_id, nonce: 0};
         <Accounts>::insert(new_id, new_account);
         <AccountCount>::mutate(|t| *t += 1);
         Ok(())
