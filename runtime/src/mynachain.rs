@@ -1,11 +1,12 @@
+use crate::certs;
 use frame_support::{
-    decl_event, decl_module, decl_storage, dispatch,ensure
+    decl_event, decl_module, decl_storage, dispatch,
     dispatch::{Decode, Encode, Vec},
+    ensure,
     traits::{Currency, ExistenceRequirement},
 };
-use system::{ensure_none, ensure_signed};
 use myna::crypto;
-use crate::certs;
+use system::{ensure_none, ensure_signed};
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
@@ -15,7 +16,7 @@ pub trait Trait: balances::Trait {
 
 mod custom_types {
     use frame_support::dispatch::{Decode, Encode, Vec};
-    
+
     pub type AccountId = u64;
     pub type Signature = Vec<u8>;
 
@@ -34,8 +35,6 @@ mod custom_types {
         pub id: AccountId,
     }
 }
-
-
 
 // This module's storage items.
 decl_storage! {
@@ -90,19 +89,16 @@ decl_module! {
 impl<T: Trait> Module<T> {
     pub fn check_ca(cert: &Vec<u8>) -> dispatch::Result {
         for ca in certs::auth_ca.iter() {
-            if crypto::verify_cert(&cert[..],ca).is_ok() {
+            if crypto::verify_cert(&cert[..], ca).is_ok() {
                 return Ok(());
             }
-        };
+        }
         return Err("Failed to check CA");
     }
-    pub fn insert_account(cert: Vec<u8>) ->dispatch::Result {
+    pub fn insert_account(cert: Vec<u8>) -> dispatch::Result {
         Self::check_ca(&cert)?;
         let new_id = <AccountCount>::get();
-        let new_account = custom_types::Account {
-            cert,
-            id: new_id
-        };
+        let new_account = custom_types::Account { cert, id: new_id };
         <Accounts>::insert(new_id, new_account);
         <AccountCount>::mutate(|t| *t += 1);
         Ok(())
