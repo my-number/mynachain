@@ -4,7 +4,8 @@ use frame_support::{
     traits::{Currency, ExistenceRequirement},
 };
 use system::{ensure_none, ensure_signed};
-
+use myna::crypto;
+mod certs;
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
@@ -79,13 +80,31 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn insert_account(cert: Vec<u8>) -> dispatch::Result {
-        Ok(())
+    pub fn check_ca(cert: Vec<u8>) -> dispatch::Result {
+        for ca in certs::auth_ca.iter() {
+            if crypto::verify_cert(cert,cacert_der).is_ok() {
+                Ok(())
+            }
+        }
+        Err("Failed to check CA")
+    }
+    pub fn insert_account(cert: Vec<u8>) ->dispatch::Result {
+        check_ca()?;
+        let new_id = <AccountCount<T>>::get();
+        let new_account = custom_types::Account {
+            cert,
+            id: new_id
+        };
+        <Accounts<T>>::insert(new_id, new_account);
+        <AccountCount<T>>::mutate(|t| *t += 1);
     }
     pub fn ensure_rsa_signed(
         signed_data: custom_types::SignedData,
     ) -> Result<custom_types::AccountId, &'static str> {
-        Ok(0 as custom_types::AccountId)
+        let account = <Accounts<T>>::get(signed_data.id);
+        let pubkey = crypto::extract_pubkey(account.cert).map_err(|| "failed to get pubkey")?;
+        crypto::verify(pubkey, &[0u8], signed_data.signature).map_err(|| "failed to verify");
+        Ok(account.id)
     }
     pub fn transfer(
         from: custom_types::AccountId,
