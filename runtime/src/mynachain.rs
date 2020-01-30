@@ -26,6 +26,7 @@ mod custom_types {
     pub struct Account {
         pub cert: Vec<u8>,
         pub id: AccountId,
+        pub nonce: u64
     }
     pub type Balance = u64;
 
@@ -81,6 +82,9 @@ decl_module! {
             let pre_bal = Balance::get(from);
             let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
             Balance::insert(from, new_bal);
+
+            Self::increment_nonce(from)?;
+            
             Ok(())
         }
     }
@@ -117,6 +121,26 @@ impl<T: Trait> Module<T> {
         to: custom_types::AccountId,
         amount: custom_types::Balance,
     ) -> dispatch::Result {
+        ensure!(Accounts::exists(from), "Account not found");
+        ensure!(Accounts::exists(to), "Account not found");
+        
+        let pre_bal_from = Balance::get(from);
+        let new_bal_from = pre_bal.checked_sub(amount).ok_or("overflow")?;
+
+        let pre_bal_to = Balance::get(to);
+        let new_bal_to = pre_bal.checked_add(amount).ok_or("overflow")?;
+        Ok(())
+    }
+
+    pub fn increment_nonce(
+        id: custom_types::AccountId
+    ) -> dispatch::Result {
+        ensure!(Accounts::exists(id), "Account not found");
+        
+        let account = Account::get(id);
+        account.nonce +=1;
+        Account::insert(id, account);
+        
         Ok(())
     }
 }
