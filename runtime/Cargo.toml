@@ -32,8 +32,7 @@ std = [
     'sudo/std',
     'system/std',
     'timestamp/std',
-    'transaction-payment/std',
-    'myna/std'
+    'transaction-payment/std'
 ]
 [build-dependencies.wasm-builder-runner]
 git = 'https://github.com/paritytech/substrate.git'
