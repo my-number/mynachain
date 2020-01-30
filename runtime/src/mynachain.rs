@@ -5,7 +5,7 @@ use frame_support::{
 };
 use system::{ensure_none, ensure_signed};
 use myna::crypto;
-mod certs;
+use crate::certs;
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
