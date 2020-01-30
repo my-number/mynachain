@@ -1,5 +1,5 @@
 use frame_support::{
-    decl_event, decl_module, decl_storage, dispatch,
+    decl_event, decl_module, decl_storage, dispatch,ensure
     dispatch::{Decode, Encode, Vec},
     traits::{Currency, ExistenceRequirement},
 };
@@ -76,6 +76,14 @@ decl_module! {
             Self::transfer(from,to, amount)?;
             Ok(())
         }
+        pub fn mint(origin, signed_data: custom_types::SignedData, amount: custom_types::Balance)-> dispatch::Result {
+            ensure_none(origin)?;
+            let from = Self::ensure_rsa_signed(signed_data)?;
+            let pre_bal = Balance::get(from);
+            let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
+            Balance::insert(from, new_bal);
+            Ok(())
+        }
     }
 }
 
@@ -102,6 +110,7 @@ impl<T: Trait> Module<T> {
     pub fn ensure_rsa_signed(
         signed_data: custom_types::SignedData,
     ) -> Result<custom_types::AccountId, &'static str> {
+        ensure!(Accounts::exists(signed_data.id), "Account not found");
         let account = <Accounts>::get(signed_data.id);
         let pubkey = crypto::extract_pubkey(&account.cert).map_err(|_| "failed to get pubkey")?;
         crypto::verify(pubkey, &[0u8], &signed_data.signature).map_err(|_| "failed to verify");
