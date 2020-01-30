@@ -121,6 +121,7 @@ rev = '40a16efefc070faf5a25442bc3ae1d0ea2478eee'
 
 [dependencies.sp-io]
 default-features = false
+features = ["disable_panic_handler", "disable_oom"]
 git = 'https://github.com/paritytech/substrate.git'
 rev = '40a16efefc070faf5a25442bc3ae1d0ea2478eee'
 
@@ -180,5 +181,5 @@ rev = '40a16efefc070faf5a25442bc3ae1d0ea2478eee'
 
 [dependencies.myna]
 git = 'https://github.com/yuki-js/myna.git'
-rev = 'master'
+branch = 'master'
 default-features = false
