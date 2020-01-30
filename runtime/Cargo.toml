@@ -181,3 +181,4 @@ rev = '40a16efefc070faf5a25442bc3ae1d0ea2478eee'
 [dependencies.myna]
 git = 'https://github.com/yuki-js/myna.git'
 rev = 'master'
+default-features = false
