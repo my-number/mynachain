@@ -80,7 +80,7 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn check_ca(cert: Vec<u8>) -> dispatch::Result {
+    pub fn check_ca(cert: &Vec<u8>) -> dispatch::Result {
         for ca in certs::auth_ca.iter() {
             if crypto::verify_cert(&cert[..],ca).is_ok() {
                 return Ok(());
