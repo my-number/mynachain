@@ -89,7 +89,7 @@ impl<T: Trait> Module<T> {
         return Err("Failed to check CA");
     }
     pub fn insert_account(cert: Vec<u8>) ->dispatch::Result {
-        Self::check_ca(&cert)?;
+        Self::check_ca(cert)?;
         let new_id = <AccountCount>::get();
         let new_account = custom_types::Account {
             cert,
