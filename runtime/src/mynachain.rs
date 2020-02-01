@@ -41,9 +41,9 @@ mod custom_types {
 decl_storage! {
     trait Store for Module<T: Trait> as MynaChainModule {
 
-        AccountCount get(account_count): custom_types::AccountId;
-        Accounts get(account): map custom_types::AccountId => custom_types::Account;
-        Balance get(balance): map custom_types::AccountId => custom_types::Balance;
+        AccountCount get(fn account_count): custom_types::AccountId;
+        Accounts get(fn account): map custom_types::AccountId => custom_types::Account;
+        Balance get(fn balance): map custom_types::AccountId => custom_types::Balance;
     }
 }
 
