@@ -1,7 +1,7 @@
 use crate::certs;
 use frame_support::{
-    decl_event, decl_module, decl_storage, dispatch,
-    dispatch::{Decode, Encode, Vec},
+    decl_event, decl_module, decl_storage,
+    dispatch::{Decode, Encode, Vec, DispatchResult, DispatchError},
     ensure,
     traits::{Currency, ExistenceRequirement},
 };
@@ -62,7 +62,7 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
-        pub fn create_account(origin, cert: Vec<u8>, sig: custom_types::Signature) -> dispatch::Result {
+        pub fn create_account(origin, cert: Vec<u8>, sig: custom_types::Signature) -> DispatchResult {
             ensure_none(origin)?;
             // check signed by cacert
             // check cert by signature
@@ -70,13 +70,13 @@ decl_module! {
             Ok(())
         }
 
-        pub fn send(origin, signed_data: custom_types::SignedData, to: custom_types::AccountId, amount: custom_types::Balance) -> dispatch::Result {
+        pub fn send(origin, signed_data: custom_types::SignedData, to: custom_types::AccountId, amount: custom_types::Balance) -> DispatchResult {
             ensure_none(origin)?;
             let from = Self::ensure_rsa_signed(signed_data)?;
             Self::transfer(from,to, amount)?;
             Ok(())
         }
-        pub fn mint(origin, signed_data: custom_types::SignedData, amount: custom_types::Balance)-> dispatch::Result {
+        pub fn mint(origin, signed_data: custom_types::SignedData, amount: custom_types::Balance)-> DispatchResult {
             ensure_none(origin)?;
             let from = Self::ensure_rsa_signed(signed_data)?;
             let pre_bal = Balance::get(from);
@@ -91,15 +91,15 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-    pub fn check_ca(cert: &Vec<u8>) -> dispatch::Result {
+    pub fn check_ca(cert: &Vec<u8>) -> DispatchResult {
         for ca in certs::auth_ca.iter() {
             if crypto::verify_cert(&cert[..], ca).is_ok() {
                 return Ok(());
             }
         }
-        return Err("Failed to check CA");
+        return Err(DispatchError::Other("Failed to check CA"));
     }
-    pub fn insert_account(cert: Vec<u8>) -> dispatch::Result {
+    pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
         Self::check_ca(&cert)?;
         let new_id = <AccountCount>::get();
         let new_account = custom_types::Account { cert: cert, id: new_id, nonce: 0};
@@ -120,7 +120,7 @@ impl<T: Trait> Module<T> {
         from: custom_types::AccountId,
         to: custom_types::AccountId,
         amount: custom_types::Balance,
-    ) -> dispatch::Result {
+    ) -> DispatchResult {
         ensure!(Accounts::exists(from), "Account not found");
         ensure!(Accounts::exists(to), "Account not found");
         
@@ -134,7 +134,7 @@ impl<T: Trait> Module<T> {
 
     pub fn increment_nonce(
         id: custom_types::AccountId
-    ) -> dispatch::Result {
+    ) -> DispatchResult {
         ensure!(Accounts::exists(id), "Account not found");
         
         let mut account = Accounts::get(id);
