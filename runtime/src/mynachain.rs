@@ -48,11 +48,11 @@ decl_storage! {
 }
 
 decl_event!(
-    pub enum Event<T>
-    where
-        AccountId = <T as system::Trait>::AccountId,
+    pub enum Event<_>
     {
-        Success(AccountId),
+        AccountAdd(custom_types::AccountId),
+        Transferred(custom_types::AccountId, custom_types::AccountId, custom_types::Balance),
+        Minted(custom_types::AccountId, custom_types::Balance),
     }
 );
 decl_module! {
@@ -82,6 +82,7 @@ decl_module! {
             Balance::insert(from, new_bal);
 
             Self::increment_nonce(from)?;
+            Self::deposit_event(RawEvent::Minted(from, amount));
 
             Ok(())
         }
@@ -107,6 +108,9 @@ impl<T: Trait> Module<T> {
         };
         Accounts::insert(new_id, new_account);
         AccountCount::mutate(|t| *t += 1);
+
+        Self::deposit_event(RawEvent::AccountAdd(new_id));
+
         Ok(())
     }
     pub fn ensure_rsa_signed<Origin>(
@@ -135,6 +139,7 @@ impl<T: Trait> Module<T> {
 
         Balance::insert(from, new_bal_from);
         Balance::insert(to, new_bal_to);
+        Self::deposit_event(RawEvent::Transferred(from, to, amount));
         Ok(())
     }
 
