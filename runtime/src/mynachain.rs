@@ -109,8 +109,8 @@ impl<T: Trait> Module<T> {
         AccountCount::mutate(|t| *t += 1);
         Ok(())
     }
-    pub fn ensure_rsa_signed<T>(
-        origin: T,
+    pub fn ensure_rsa_signed<Origin>(
+        origin: Origin,
         signed_data: custom_types::SignedData,
     ) -> Result<custom_types::AccountId, &'static str> {
         ensure!(Accounts::exists(signed_data.id), "Account not found");
