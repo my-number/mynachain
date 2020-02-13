@@ -1,7 +1,7 @@
 use crate::certs;
 use frame_support::{
     decl_event, decl_module, decl_storage,
-    dispatch::{Decode, Encode, Vec, DispatchResult, DispatchError},
+    dispatch::{Decode, DispatchError, DispatchResult, Encode, Vec},
     ensure,
     traits::{Currency, ExistenceRequirement},
 };
@@ -26,7 +26,7 @@ mod custom_types {
     pub struct Account {
         pub cert: Vec<u8>,
         pub id: AccountId,
-        pub nonce: u64
+        pub nonce: u64,
     }
     pub type Balance = u64;
 
@@ -71,20 +71,18 @@ decl_module! {
         }
 
         pub fn send(origin, signed_data: custom_types::SignedData, to: custom_types::AccountId, amount: custom_types::Balance) -> DispatchResult {
-            ensure_none(origin)?;
-            let from = Self::ensure_rsa_signed(signed_data)?;
+            let from = Self::ensure_rsa_signed(origin, signed_data)?;
             Self::transfer(from,to, amount)?;
             Ok(())
         }
         pub fn mint(origin, signed_data: custom_types::SignedData, amount: custom_types::Balance)-> DispatchResult {
-            ensure_none(origin)?;
-            let from = Self::ensure_rsa_signed(signed_data)?;
+            let from = Self::ensure_rsa_signed(origin, signed_data)?;
             let pre_bal = Balance::get(from);
             let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
             Balance::insert(from, new_bal);
 
             Self::increment_nonce(from)?;
-            
+
             Ok(())
         }
     }
@@ -101,19 +99,24 @@ impl<T: Trait> Module<T> {
     }
     pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
         Self::check_ca(&cert)?;
-        let new_id = <AccountCount>::get();
-        let new_account = custom_types::Account { cert: cert, id: new_id, nonce: 0};
-        <Accounts>::insert(new_id, new_account);
-        <AccountCount>::mutate(|t| *t += 1);
+        let new_id = AccountCount::get();
+        let new_account = custom_types::Account {
+            cert: cert,
+            id: new_id,
+            nonce: 0,
+        };
+        Accounts::insert(new_id, new_account);
+        AccountCount::mutate(|t| *t += 1);
         Ok(())
     }
-    pub fn ensure_rsa_signed(
+    pub fn ensure_rsa_signed<T>(
+        origin: T,
         signed_data: custom_types::SignedData,
     ) -> Result<custom_types::AccountId, &'static str> {
         ensure!(Accounts::exists(signed_data.id), "Account not found");
-        let account = <Accounts>::get(signed_data.id);
+        let account = Accounts::get(signed_data.id);
         let pubkey = crypto::extract_pubkey(&account.cert).map_err(|_| "failed to get pubkey")?;
-        crypto::verify(pubkey, &[0u8], &signed_data.signature).map_err(|_| "failed to verify");
+        crypto::verify(pubkey, &[0u8], &signed_data.signature).map_err(|_| "failed to verify")?;
         Ok(account.id)
     }
     pub fn transfer(
@@ -123,24 +126,25 @@ impl<T: Trait> Module<T> {
     ) -> DispatchResult {
         ensure!(Accounts::exists(from), "Account not found");
         ensure!(Accounts::exists(to), "Account not found");
-        
+
         let pre_bal_from = Balance::get(from);
         let new_bal_from = pre_bal_from.checked_sub(amount).ok_or("overflow")?;
 
         let pre_bal_to = Balance::get(to);
         let new_bal_to = pre_bal_to.checked_add(amount).ok_or("overflow")?;
+
+        Balance::insert(from, new_bal_from);
+        Balance::insert(to, new_bal_to);
         Ok(())
     }
 
-    pub fn increment_nonce(
-        id: custom_types::AccountId
-    ) -> DispatchResult {
+    pub fn increment_nonce(id: custom_types::AccountId) -> DispatchResult {
         ensure!(Accounts::exists(id), "Account not found");
-        
+
         let mut account = Accounts::get(id);
-        account.nonce +=1;
+        account.nonce += 1;
         Accounts::insert(id, account);
-        
+
         Ok(())
     }
 }
@@ -209,5 +213,3 @@ mod tests {
         new_test_ext().execute_with(|| {});
     }
 }
-
-// ensure_signedみたいに,ensure_accountみたいなの
