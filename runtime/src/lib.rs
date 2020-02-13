@@ -253,7 +253,7 @@ construct_runtime!(
 		TransactionPayment: transaction_payment::{Module, Storage},
 		Sudo: sudo,
 		// Used for the module template in `./mynachain.rs`
-		MynaChainModule: mynachain::{Module, Call, Storage, Event<T>},
+		MynaChainModule: mynachain::{Module, Call, Storage, Event},
 		RandomnessCollectiveFlip: randomness_collective_flip::{Module, Call, Storage},
 	}
 );

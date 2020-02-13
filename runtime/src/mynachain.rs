@@ -11,7 +11,7 @@ use system::{ensure_none, ensure_signed};
 pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
     /// The overarching event type.
-    type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+    type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 }
 
 mod custom_types {
@@ -48,7 +48,7 @@ decl_storage! {
 }
 
 decl_event!(
-    pub enum Event<_>
+    pub enum Event
     {
         AccountAdd(custom_types::AccountId),
         Transferred(custom_types::AccountId, custom_types::AccountId, custom_types::Balance),
@@ -82,7 +82,7 @@ decl_module! {
             Balance::insert(from, new_bal);
 
             Self::increment_nonce(from)?;
-            Self::deposit_event(RawEvent::Minted(from, amount));
+            Self::deposit_event(Event::Minted(from, amount));
 
             Ok(())
         }
@@ -109,7 +109,7 @@ impl<T: Trait> Module<T> {
         Accounts::insert(new_id, new_account);
         AccountCount::mutate(|t| *t += 1);
 
-        Self::deposit_event(RawEvent::AccountAdd(new_id));
+        Self::deposit_event(Event::AccountAdd(new_id));
 
         Ok(())
     }
@@ -139,7 +139,7 @@ impl<T: Trait> Module<T> {
 
         Balance::insert(from, new_bal_from);
         Balance::insert(to, new_bal_to);
-        Self::deposit_event(RawEvent::Transferred(from, to, amount));
+        Self::deposit_event(Event::Transferred(from, to, amount));
         Ok(())
     }
 
