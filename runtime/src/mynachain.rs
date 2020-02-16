@@ -68,7 +68,7 @@ decl_module! {
 
             Self::check_ca(&cert)?;
 
-            check_cert(cert, sig, cert)?;
+            Self::check_cert(cert, sig, cert)?;
             
             Self::insert_account(cert)?;
             Ok(())
