@@ -5,6 +5,7 @@ use frame_support::{
     ensure,
     traits::{Currency, ExistenceRequirement},
 };
+use sp_std::vec;
 use myna::crypto;
 use system::{ensure_none, ensure_signed};
 /// The module's configuration trait.
@@ -64,19 +65,22 @@ decl_module! {
 
         pub fn create_account(origin, cert: Vec<u8>, sig: custom_types::Signature) -> DispatchResult {
             ensure_none(origin)?;
-            // check signed by cacert
-            // check cert by signature
+
+            Self::check_ca(&cert)?;
+
+            check_cert(cert, sig, cert)?;
+            
             Self::insert_account(cert)?;
             Ok(())
         }
 
         pub fn send(origin, signed_data: custom_types::SignedData, to: custom_types::AccountId, amount: custom_types::Balance) -> DispatchResult {
-            let from = Self::ensure_rsa_signed(origin, signed_data)?;
+            let from = Self::ensure_rsa_signed(origin, signed_data, vec![0u8])?;
             Self::transfer(from,to, amount)?;
             Ok(())
         }
         pub fn mint(origin, signed_data: custom_types::SignedData, amount: custom_types::Balance)-> DispatchResult {
-            let from = Self::ensure_rsa_signed(origin, signed_data)?;
+            let from = Self::ensure_rsa_signed(origin, signed_data, vec![0u8])?;
             let pre_bal = Balance::get(from);
             let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
             Balance::insert(from, new_bal);
@@ -99,7 +103,7 @@ impl<T: Trait> Module<T> {
         return Err(DispatchError::Other("Failed to check CA"));
     }
     pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
-        Self::check_ca(&cert)?;
+        
         let new_id = AccountCount::get();
         let new_account = custom_types::Account {
             cert: cert,
@@ -113,14 +117,27 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
+
+    pub fn check_cert(
+        cert: Vec<u8>,
+        sig: custom_types::Signature,
+        serialized: Vec<u8>
+    ) -> Result<(), &'static str> {
+        
+        let pubkey = crypto::extract_pubkey(&cert[..]).map_err(|_| "failed to get pubkey")?;
+        crypto::verify(pubkey, &serialized[..], &sig).map_err(|_| "failed to verify")?;
+        Ok(())
+    }
+    
     pub fn ensure_rsa_signed<Origin>(
         origin: Origin,
         signed_data: custom_types::SignedData,
+        serialized: Vec<u8>
     ) -> Result<custom_types::AccountId, &'static str> {
         ensure!(Accounts::exists(signed_data.id), "Account not found");
         let account = Accounts::get(signed_data.id);
-        let pubkey = crypto::extract_pubkey(&account.cert).map_err(|_| "failed to get pubkey")?;
-        crypto::verify(pubkey, &[0u8], &signed_data.signature).map_err(|_| "failed to verify")?;
+
+        Self::check_cert(account.cert, signed_data.signature, serialized)?;
         Ok(account.id)
     }
     pub fn transfer(
