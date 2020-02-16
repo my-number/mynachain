@@ -68,7 +68,7 @@ decl_module! {
 
             Self::check_ca(&cert)?;
 
-            Self::check_cert(cert, sig, cert)?;
+            Self::check_cert(&cert, sig, &cert)?;
             
             Self::insert_account(cert)?;
             Ok(())
@@ -119,9 +119,9 @@ impl<T: Trait> Module<T> {
     }
 
     pub fn check_cert(
-        cert: Vec<u8>,
+        cert: &Vec<u8>,
         sig: custom_types::Signature,
-        serialized: Vec<u8>
+        serialized: &Vec<u8>
     ) -> Result<(), &'static str> {
         
         let pubkey = crypto::extract_pubkey(&cert[..]).map_err(|_| "failed to get pubkey")?;
@@ -137,7 +137,7 @@ impl<T: Trait> Module<T> {
         ensure!(Accounts::exists(signed_data.id), "Account not found");
         let account = Accounts::get(signed_data.id);
 
-        Self::check_cert(account.cert, signed_data.signature, serialized)?;
+        Self::check_cert(&account.cert, signed_data.signature, &serialized)?;
         Ok(account.id)
     }
     pub fn transfer(
