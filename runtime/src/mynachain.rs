@@ -1,4 +1,5 @@
 use crate::types;
+use crate::types::Signed;
 use frame_support::{
     decl_event, decl_module, decl_storage,
     dispatch::{Decode, DispatchError, DispatchResult, Encode, Vec},
@@ -32,6 +33,7 @@ decl_event!(
         AccountAdd(types::AccountId),
         Transferred(types::AccountId, types::AccountId, types::Balance),
         Minted(types::AccountId, types::Balance),
+        AlwaysOk,
     }
 );
 decl_module! {
@@ -50,36 +52,42 @@ decl_module! {
             ensure!(tx.id==0, "Id is not zero");
             tx.tbs.check_ca()?;
             
-            let cert: Vec<u8> = tx.tbs.cert;
-            let sig: types::Signature = tx.tbs.signature;
-            let pubkey = crypto::extract_pubkey(&cert[..]).map_err(|_| "failed to get pubkey")?;
-            tx.verify(&pubkey[..]);
-            Self::insert_account(cert)?;
+            let sig = &tx.signature;
+            let pubkey = crypto::extract_pubkey(&tx.tbs.cert[..]).map_err(|_| "failed to get pubkey")?;
+            tx.verify(pubkey);
+            Self::insert_account(tx.tbs.cert)?;
             Ok(())
         }
 
         pub fn send(origin, tx: types::SignedData<types::TxSend>) -> DispatchResult {
             ensure_none(origin)?;
-            let from = Self::ensure_rsa_signed(tx)?;
-            
+            let from = Self::ensure_rsa_signed(&tx)?;
             let to = tx.tbs.to;
-            let amount = tx.to.amount;
-            Self::transfer(from,to, amount)?;
-            Self::increase_nonce(from)?;
+            let amount = tx.tbs.amount;
+            Self::transfer(from, to, amount)?;
+            Self::increment_nonce(from)?;
             Ok(())
         }
-        /*
-        pub fn mint(origin, signed_data: types::SignedData, amount: types::Balance)-> DispatchResult {
-            let from = Self::ensure_rsa_signed(origin, signed_data, vec![0u8])?;
+        pub fn mint(origin, tx: types::SignedData<types::TxMint>) -> DispatchResult {
+            ensure_none(origin)?;
+            let from = Self::ensure_rsa_signed(&tx)?;
+            let amount = tx.tbs.amount;
             let pre_bal = Balance::get(from);
             let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
             Balance::insert(from, new_bal);
-
             Self::increment_nonce(from)?;
             Self::deposit_event(Event::Minted(from, amount));
-
             Ok(())
-        }*/
+        }
+        pub fn always_ok(origin) -> DispatchResult {
+            Self::deposit_event(Event::AlwaysOk);
+            ensure_none(origin)?;
+            Ok(())
+        }
+        pub fn always_ok_wo_check(origin) -> DispatchResult {
+            Self::deposit_event(Event::AlwaysOk);
+            Ok(())
+        }
     }
 }
 
@@ -99,35 +107,14 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-    pub fn ensure_rsa_signed<TxType>(tx: types::SignedData<TxType>) -> Result<types::AccountId, &'static str> {
-        ensure!(Accounts::exists(tx.id), "Account not found");
-        let account = Accounts::get(tx.id);
-        tx.verify()?;
+    pub fn ensure_rsa_signed<Tx: types::Signed>(tx: &Tx) -> Result<types::AccountId, &'static str> {
+        ensure!(Accounts::exists(tx.get_id()), "Account not found");
+        let account = Accounts::get(tx.get_id());
+        let pubkey = crypto::extract_pubkey(&account.cert[..]).map_err(|_| "failed to get pubkey")?;
+        tx.verify(pubkey)?;
         Ok(account.id)
     }
-/*    pub fn check_cert(
-        cert: &Vec<u8>,
-        sig: types::Signature,
-        serialized: &Vec<u8>
-    ) -> Result<(), &'static str> {
-        
-        let pubkey = crypto::extract_pubkey(&cert[..]).map_err(|_| "failed to get pubkey")?;
-        crypto::verify(pubkey, &serialized[..], &sig).map_err(|_| "failed to verify")?;
-        Ok(())
-    }
-    
-    pub fn ensure_rsa_signed<Origin>(
-        origin: Origin,
-        signed_data: types::SignedData,
-        serialized: Vec<u8>
-    ) -> Result<types::AccountId, &'static str> {
-        ensure!(Accounts::exists(signed_data.id), "Account not found");
-        let account = Accounts::get(signed_data.id);
 
-        Self::check_cert(&account.cert, signed_data.signature, &serialized)?;
-        Ok(account.id)
-    }
-*/
     pub fn transfer(
         from: types::AccountId,
         to: types::AccountId,

@@ -28,7 +28,7 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use balances::Call as BalancesCall;
 pub use frame_support::{
-    construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue,
+    construct_runtime, parameter_types, traits::Randomness, weights::Weight, StorageValue, debug::print
 };
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -324,7 +324,10 @@ impl_runtime_apis! {
             block: Block,
             data: sp_inherents::InherentData,
         ) -> sp_inherents::CheckInherentsResult {
-            data.check_extrinsics(&block)
+            
+            let result = data.check_extrinsics(&block);
+            print!("{:?}",result);
+            return result;
         }
 
         fn random_seed() -> <Block as BlockT>::Hash {
@@ -334,7 +337,7 @@ impl_runtime_apis! {
 
     impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
         fn validate_transaction(tx: <Block as BlockT>::Extrinsic) -> TransactionValidity {
-            Executive::validate_transaction(tx)
+            Executive::validate_transaction(tx); 
         }
     }
 

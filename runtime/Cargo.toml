@@ -164,6 +164,9 @@ git = 'https://github.com/yuki-js/myna.git'
 branch = 'master'
 default-features = false
 
+[dependencies.rsa]
+version = "0.2.0"
+
 [dependencies.hex-literal]
 version = "0.2.1"
 

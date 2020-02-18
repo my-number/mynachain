@@ -1,11 +1,14 @@
 use frame_support::dispatch::{Decode, Encode, Vec};
 use myna::crypto;
-use sp_core::Blake2Hasher;
+use sp_core::{Blake2Hasher, Hasher};
+use rsa::RSAPublicKey;
 use crate::certs;
 
 pub type AccountId = u64;
 pub type Signature = Vec<u8>;
 pub type uNonce = u64;
+pub type Balance = u64;
+
 /// The struct of individual account
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -14,23 +17,27 @@ pub struct Account {
     pub id: AccountId,
     pub nonce: uNonce,
 }
-pub type Balance = u64;
 
-pub trait Nonce {
-    fn get_nonce(&self) -> uNonce {
-        self.nonce
-    }
+pub trait Signed {
+    fn get_id(&self) -> &AccountId;
+    fn get_signature(&self) -> &Signature;
+    fn verify(&self, pubkey: RSAPublicKey)->Result<(), &'static str>;
 }
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
-pub struct SignedData<T> where T: Encode + Decode + Default + Clone + PartialEq + Nonce {
-    pub tbs: T,
+pub struct SignedData<Tx> where Tx: Encode + Clone {
+    pub tbs: Tx,
     pub signature: Signature,
     pub id: AccountId,
 }
 
-
-impl<T> SignedData<T> {
-    pub fn verify(&self, pubkey: &[u8])->Result<(), &'static str> {
+impl<Tx> Signed for SignedData<Tx> where Tx: Encode + Clone {
+    fn get_id(&self) -> &AccountId{
+        &self.id
+    }
+    fn get_signature(&self) -> &Signature{
+        &self.signature
+    }
+    fn verify(&self, pubkey: RSAPublicKey)->Result<(), &'static str> {
         let encoded = self.tbs.encode();
         let sighash = Blake2Hasher::hash(&encoded);
         match crypto::verify(pubkey, sighash.as_ref(), &self.signature[..]){
@@ -47,8 +54,6 @@ pub struct TxCreateAccount {
     pub nonce: uNonce
 }
 
-
-impl Nonce for TxCreateAccount{}
 impl TxCreateAccount {
     pub fn check_ca(&self) -> Result<(), &'static str>  {
         for ca in certs::auth_ca.iter() {
@@ -60,11 +65,15 @@ impl TxCreateAccount {
     }
 }
 
+#[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
 pub struct TxSend {
     pub to: AccountId,
     pub amount: Balance,
     pub nonce: uNonce
 }
 
-
-impl Nonce for TxSend {}
+#[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
+pub struct TxMint {
+    pub amount: Balance,
+    pub nonce: uNonce
+}
