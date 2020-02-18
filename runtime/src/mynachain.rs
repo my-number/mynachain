@@ -1,4 +1,4 @@
-use crate::{certs,types};
+use crate::types;
 use frame_support::{
     decl_event, decl_module, decl_storage,
     dispatch::{Decode, DispatchError, DispatchResult, Encode, Vec},
@@ -62,8 +62,8 @@ decl_module! {
             ensure_none(origin)?;
             let from = Self::ensure_rsa_signed(tx)?;
             
-            let to: types::AccountId = tx.tbs.to;
-            let amount = types::Balance = tx.to.amount;
+            let to = tx.tbs.to;
+            let amount = tx.to.amount;
             Self::transfer(from,to, amount)?;
             Self::increase_nonce(from)?;
             Ok(())
@@ -99,7 +99,7 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-    pub fn ensure_rsa_signed<T>(tx: types::SignedData<T>) -> Result<types::AccountId, &'static str> {
+    pub fn ensure_rsa_signed<TxType>(tx: types::SignedData<TxType>) -> Result<types::AccountId, &'static str> {
         ensure!(Accounts::exists(tx.id), "Account not found");
         let account = Accounts::get(tx.id);
         tx.verify()?;

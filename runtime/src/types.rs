@@ -5,7 +5,7 @@ use crate::certs;
 
 pub type AccountId = u64;
 pub type Signature = Vec<u8>;
-pub type uNonce = u64
+pub type uNonce = u64;
 /// The struct of individual account
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -17,12 +17,12 @@ pub struct Account {
 pub type Balance = u64;
 
 pub trait Nonce {
-    pub fn get_nonce(&self) -> uNonce {
+    fn get_nonce(&self) -> uNonce {
         self.nonce
     }
 }
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
-pub struct SignedData<T> where T: Encode + Decode + Default + Clone + PartialEq + Debug + Nonce {
+pub struct SignedData<T> where T: Encode + Decode + Default + Clone + PartialEq + Nonce {
     pub tbs: T,
     pub signature: Signature,
     pub id: AccountId,
