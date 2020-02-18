@@ -1,4 +1,4 @@
-use crate::certs;
+use crate::{certs,types};
 use frame_support::{
     decl_event, decl_module, decl_storage,
     dispatch::{Decode, DispatchError, DispatchResult, Encode, Vec},
@@ -8,7 +8,7 @@ use frame_support::{
 use sp_std::vec;
 use myna::crypto;
 use system::{ensure_none, ensure_signed};
-pub mod types;
+
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
