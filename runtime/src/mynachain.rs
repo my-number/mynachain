@@ -8,6 +8,7 @@ use frame_support::{
 use sp_std::vec;
 use myna::crypto;
 use system::{ensure_none, ensure_signed};
+mod types;
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
@@ -15,45 +16,22 @@ pub trait Trait: balances::Trait {
     type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 }
 
-mod custom_types {
-    use frame_support::dispatch::{Decode, Encode, Vec};
-
-    pub type AccountId = u64;
-    pub type Signature = Vec<u8>;
-
-    /// The struct of individual account
-    #[derive(Encode, Decode, Default, Clone, PartialEq)]
-    #[cfg_attr(feature = "std", derive(Debug))]
-    pub struct Account {
-        pub cert: Vec<u8>,
-        pub id: AccountId,
-        pub nonce: u64,
-    }
-    pub type Balance = u64;
-
-    #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
-    pub struct SignedData {
-        pub signature: Signature,
-        pub id: AccountId,
-    }
-}
-
 // This module's storage items.
 decl_storage! {
     trait Store for Module<T: Trait> as MynaChainModule {
 
-        AccountCount get(fn account_count): custom_types::AccountId;
-        Accounts get(fn account): map custom_types::AccountId => custom_types::Account;
-        Balance get(fn balance): map custom_types::AccountId => custom_types::Balance;
+        AccountCount get(fn account_count): types::AccountId;
+        Accounts get(fn account): map types::AccountId => types::Account;
+        Balance get(fn balance): map types::AccountId => types::Balance;
     }
 }
 
 decl_event!(
     pub enum Event
     {
-        AccountAdd(custom_types::AccountId),
-        Transferred(custom_types::AccountId, custom_types::AccountId, custom_types::Balance),
-        Minted(custom_types::AccountId, custom_types::Balance),
+        AccountAdd(types::AccountId),
+        Transferred(types::AccountId, types::AccountId, types::Balance),
+        Minted(types::AccountId, types::Balance),
     }
 );
 decl_module! {
@@ -63,23 +41,29 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
-        pub fn create_account(origin, cert: Vec<u8>, sig: custom_types::Signature) -> DispatchResult {
+        /// Create an Account
+        /// nonce must be zero
+        /// id must be zero
+        pub fn create_account(origin, tx: types::SignedData<types::TxCreateAccount>) -> DispatchResult {
             ensure_none(origin)?;
-
-            Self::check_ca(&cert)?;
-
-            Self::check_cert(&cert, sig, &cert)?;
+            ensure!(tx.tbs.nonce==0, "Nonce is not zero");
+            ensure!(tx.id==0, "Id is not zero");
             
+            let cert: Vec<u8> = tx.tbs.cert;
+            let sig: types::Signature = tx.tbs.signature;
+            Self::check_ca(&cert)?;
+            let pubkey = crypto::extract_pubkey(&cert[..]).map_err(|_| "failed to get pubkey")?;
+            tx.verify(&pubkey[..]);
             Self::insert_account(cert)?;
             Ok(())
         }
 
-        pub fn send(origin, signed_data: custom_types::SignedData, to: custom_types::AccountId, amount: custom_types::Balance) -> DispatchResult {
+        pub fn send(origin, signed_data: types::SignedData, to: types::AccountId, amount: types::Balance) -> DispatchResult {
             let from = Self::ensure_rsa_signed(origin, signed_data, vec![0u8])?;
             Self::transfer(from,to, amount)?;
             Ok(())
         }
-        pub fn mint(origin, signed_data: custom_types::SignedData, amount: custom_types::Balance)-> DispatchResult {
+        pub fn mint(origin, signed_data: types::SignedData, amount: types::Balance)-> DispatchResult {
             let from = Self::ensure_rsa_signed(origin, signed_data, vec![0u8])?;
             let pre_bal = Balance::get(from);
             let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
@@ -105,7 +89,7 @@ impl<T: Trait> Module<T> {
     pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
         
         let new_id = AccountCount::get();
-        let new_account = custom_types::Account {
+        let new_account = types::Account {
             cert: cert,
             id: new_id,
             nonce: 0,
@@ -120,7 +104,7 @@ impl<T: Trait> Module<T> {
 
     pub fn check_cert(
         cert: &Vec<u8>,
-        sig: custom_types::Signature,
+        sig: types::Signature,
         serialized: &Vec<u8>
     ) -> Result<(), &'static str> {
         
@@ -131,9 +115,9 @@ impl<T: Trait> Module<T> {
     
     pub fn ensure_rsa_signed<Origin>(
         origin: Origin,
-        signed_data: custom_types::SignedData,
+        signed_data: types::SignedData,
         serialized: Vec<u8>
-    ) -> Result<custom_types::AccountId, &'static str> {
+    ) -> Result<types::AccountId, &'static str> {
         ensure!(Accounts::exists(signed_data.id), "Account not found");
         let account = Accounts::get(signed_data.id);
 
@@ -141,9 +125,9 @@ impl<T: Trait> Module<T> {
         Ok(account.id)
     }
     pub fn transfer(
-        from: custom_types::AccountId,
-        to: custom_types::AccountId,
-        amount: custom_types::Balance,
+        from: types::AccountId,
+        to: types::AccountId,
+        amount: types::Balance,
     ) -> DispatchResult {
         ensure!(Accounts::exists(from), "Account not found");
         ensure!(Accounts::exists(to), "Account not found");
@@ -160,7 +144,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
 
-    pub fn increment_nonce(id: custom_types::AccountId) -> DispatchResult {
+    pub fn increment_nonce(id: types::AccountId) -> DispatchResult {
         ensure!(Accounts::exists(id), "Account not found");
 
         let mut account = Accounts::get(id);
