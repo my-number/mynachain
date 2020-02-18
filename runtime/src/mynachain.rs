@@ -8,7 +8,7 @@ use frame_support::{
 use sp_std::vec;
 use myna::crypto;
 use system::{ensure_none, ensure_signed};
-mod types;
+pub mod types;
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
@@ -48,21 +48,27 @@ decl_module! {
             ensure_none(origin)?;
             ensure!(tx.tbs.nonce==0, "Nonce is not zero");
             ensure!(tx.id==0, "Id is not zero");
+            tx.tbs.check_ca()?;
             
             let cert: Vec<u8> = tx.tbs.cert;
             let sig: types::Signature = tx.tbs.signature;
-            Self::check_ca(&cert)?;
             let pubkey = crypto::extract_pubkey(&cert[..]).map_err(|_| "failed to get pubkey")?;
             tx.verify(&pubkey[..]);
             Self::insert_account(cert)?;
             Ok(())
         }
 
-        pub fn send(origin, signed_data: types::SignedData, to: types::AccountId, amount: types::Balance) -> DispatchResult {
-            let from = Self::ensure_rsa_signed(origin, signed_data, vec![0u8])?;
+        pub fn send(origin, tx: types::SignedData<types::TxSend>) -> DispatchResult {
+            ensure_none(origin)?;
+            let from = Self::ensure_rsa_signed(tx)?;
+            
+            let to: types::AccountId = tx.tbs.to;
+            let amount = types::Balance = tx.to.amount;
             Self::transfer(from,to, amount)?;
+            Self::increase_nonce(from)?;
             Ok(())
         }
+        /*
         pub fn mint(origin, signed_data: types::SignedData, amount: types::Balance)-> DispatchResult {
             let from = Self::ensure_rsa_signed(origin, signed_data, vec![0u8])?;
             let pre_bal = Balance::get(from);
@@ -73,19 +79,11 @@ decl_module! {
             Self::deposit_event(Event::Minted(from, amount));
 
             Ok(())
-        }
+        }*/
     }
 }
 
 impl<T: Trait> Module<T> {
-    pub fn check_ca(cert: &Vec<u8>) -> DispatchResult {
-        for ca in certs::auth_ca.iter() {
-            if crypto::verify_cert(&cert[..], ca).is_ok() {
-                return Ok(());
-            }
-        }
-        return Err(DispatchError::Other("Failed to check CA"));
-    }
     pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
         
         let new_id = AccountCount::get();
@@ -101,8 +99,13 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-
-    pub fn check_cert(
+    pub fn ensure_rsa_signed<T>(tx: types::SignedData<T>) -> Result<types::AccountId, &'static str> {
+        ensure!(Accounts::exists(tx.id), "Account not found");
+        let account = Accounts::get(tx.id);
+        tx.verify()?;
+        Ok(account.id)
+    }
+/*    pub fn check_cert(
         cert: &Vec<u8>,
         sig: types::Signature,
         serialized: &Vec<u8>
@@ -124,6 +127,7 @@ impl<T: Trait> Module<T> {
         Self::check_cert(&account.cert, signed_data.signature, &serialized)?;
         Ok(account.id)
     }
+*/
     pub fn transfer(
         from: types::AccountId,
         to: types::AccountId,

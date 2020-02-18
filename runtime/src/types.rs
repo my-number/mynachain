@@ -1,6 +1,7 @@
 use frame_support::dispatch::{Decode, Encode, Vec};
 use myna::crypto;
 use sp_core::Blake2Hasher;
+use crate::certs;
 
 pub type AccountId = u64;
 pub type Signature = Vec<u8>;
@@ -16,7 +17,9 @@ pub struct Account {
 pub type Balance = u64;
 
 pub trait Nonce {
-    pub fn get_nonce(&self) -> uNonce;
+    pub fn get_nonce(&self) -> uNonce {
+        self.nonce
+    }
 }
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
 pub struct SignedData<T> where T: Encode + Decode + Default + Clone + PartialEq + Debug + Nonce {
@@ -25,17 +28,7 @@ pub struct SignedData<T> where T: Encode + Decode + Default + Clone + PartialEq 
     pub id: AccountId,
 }
 
-#[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
-pub struct TxCreateAccount {
-    pub cert: Vec<u8>,
-    pub nonce: uNonce
-}
 
-impl Nonce for TxCreateAccount{
-    fn get_nonce(&self) -> uNonce {
-        self.nonce
-    }
-}
 impl<T> SignedData<T> {
     pub fn verify(&self, pubkey: &[u8])->Result<(), &'static str> {
         let encoded = self.tbs.encode();
@@ -46,3 +39,32 @@ impl<T> SignedData<T> {
         }
     }
 }
+
+
+#[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
+pub struct TxCreateAccount {
+    pub cert: Vec<u8>,
+    pub nonce: uNonce
+}
+
+
+impl Nonce for TxCreateAccount{}
+impl TxCreateAccount {
+    pub fn check_ca(&self) -> Result<(), &'static str>  {
+        for ca in certs::auth_ca.iter() {
+            if crypto::verify_cert(&self.cert[..], ca).is_ok() {
+                return Ok(());
+            }
+        }
+        return Err("Failed to check CA");
+    }
+}
+
+pub struct TxSend {
+    pub to: AccountId,
+    pub amount: Balance,
+    pub nonce: uNonce
+}
+
+
+impl Nonce for TxSend {}
