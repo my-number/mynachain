@@ -43,39 +43,6 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
-        /// Create an Account
-        /// nonce must be zero
-        /// id must be zero
-        pub fn create_account(origin, tx: types::SignedData<types::TxCreateAccount>) -> DispatchResult {
-            ensure!(tx.tbs.nonce==0, "Nonce is not zero");
-            ensure!(tx.id==0, "Id is not zero");
-            tx.tbs.check_ca()?;
-            
-            let sig = &tx.signature;
-            let pubkey = crypto::extract_pubkey(&tx.tbs.cert[..]).map_err(|_| "failed to get pubkey")?;
-            tx.verify(pubkey);
-            Self::insert_account(tx.tbs.cert)?;
-            Ok(())
-        }
-
-        pub fn send(origin, tx: types::SignedData<types::TxSend>) -> DispatchResult {
-            let from = Self::ensure_rsa_signed(&tx)?;
-            let to = tx.tbs.to;
-            let amount = tx.tbs.amount;
-            Self::transfer(from, to, amount)?;
-            Self::increment_nonce(from)?;
-            Ok(())
-        }
-        pub fn mint(origin, tx: types::SignedData<types::TxMint>) -> DispatchResult {
-            let from = Self::ensure_rsa_signed(&tx)?;
-            let amount = tx.tbs.amount;
-            let pre_bal = Balance::get(from);
-            let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
-            Balance::insert(from, new_bal);
-            Self::increment_nonce(from)?;
-            Self::deposit_event(Event::Minted(from, amount));
-            Ok(())
-        }
         pub fn always_ok(origin) -> DispatchResult {
             Self::deposit_event(Event::AlwaysOk);
             ensure_none(origin)?;
@@ -85,10 +52,55 @@ decl_module! {
             Self::deposit_event(Event::AlwaysOk);
             Ok(())
         }
+        
+        pub fn go(origin, tx: types::SignedData) -> DispatchResult{
+            match tx.clone().tbs {
+                types::Tx::CreateAccount(t) => Self::create_account(tx, t),
+                types::Tx::Send(t) => Self::send(tx, t),
+                types::Tx::Mint(t) => Self::mint(tx, t),
+                _ => Ok(())
+            }
+        }
+        
     }
 }
 
 impl<T: Trait> Module<T> {
+    /// Create an Account
+    /// nonce must be zero
+    /// id must be zero
+    pub fn create_account(tx: types::SignedData, tbs: types::TxCreateAccount) -> DispatchResult {
+        ensure!(tbs.nonce==0, "Nonce is not zero");
+        ensure!(tx.id==0, "Id is not zero");
+        tbs.check_ca()?;
+        
+        let sig = &tx.signature;
+        let pubkey = crypto::extract_pubkey(&tbs.cert[..]).map_err(|_| "failed to get pubkey")?;
+        tx.verify(pubkey);
+        Self::insert_account(tbs.cert)?;
+        Ok(())
+    }
+
+    pub fn send(tx: types::SignedData, tbs: types::TxSend) -> DispatchResult {
+        let from = Self::ensure_rsa_signed(&tx)?;
+        let to = tbs.to;
+        let amount = tbs.amount;
+        Self::transfer(from, to, amount)?;
+        Self::increment_nonce(from)?;
+        Ok(())
+    }
+    pub fn mint(tx: types::SignedData, tbs: types::TxMint) -> DispatchResult {
+        let from = Self::ensure_rsa_signed(&tx)?;
+        let amount = tbs.amount;
+        let pre_bal = Balance::get(from);
+        let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
+        Balance::insert(from, new_bal);
+        Self::increment_nonce(from)?;
+        Self::deposit_event(Event::Minted(from, amount));
+        Ok(())
+    }
+    
+    // module func starts here
     pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
         
         let new_id = AccountCount::get();

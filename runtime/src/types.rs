@@ -24,13 +24,24 @@ pub trait Signed {
     fn verify(&self, pubkey: RSAPublicKey)->Result<(), &'static str>;
 }
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
-pub struct SignedData<Tx> where Tx: Encode + Clone {
+pub struct SignedData{
     pub tbs: Tx,
     pub signature: Signature,
     pub id: AccountId,
 }
-
-impl<Tx> Signed for SignedData<Tx> where Tx: Encode + Clone {
+#[derive(Encode, Decode, Clone, PartialEq, Debug)]
+pub enum Tx {
+    CreateAccount(TxCreateAccount),
+    Send(TxSend),
+    Mint(TxMint),
+    Other
+}
+impl Default for Tx {
+    fn default() -> Self {
+        Tx::Other
+    }
+}
+impl Signed for SignedData {
     fn get_id(&self) -> &AccountId{
         &self.id
     }
