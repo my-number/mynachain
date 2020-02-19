@@ -47,7 +47,6 @@ decl_module! {
         /// nonce must be zero
         /// id must be zero
         pub fn create_account(origin, tx: types::SignedData<types::TxCreateAccount>) -> DispatchResult {
-            ensure_none(origin)?;
             ensure!(tx.tbs.nonce==0, "Nonce is not zero");
             ensure!(tx.id==0, "Id is not zero");
             tx.tbs.check_ca()?;
@@ -60,7 +59,6 @@ decl_module! {
         }
 
         pub fn send(origin, tx: types::SignedData<types::TxSend>) -> DispatchResult {
-            ensure_none(origin)?;
             let from = Self::ensure_rsa_signed(&tx)?;
             let to = tx.tbs.to;
             let amount = tx.tbs.amount;
@@ -69,7 +67,6 @@ decl_module! {
             Ok(())
         }
         pub fn mint(origin, tx: types::SignedData<types::TxMint>) -> DispatchResult {
-            ensure_none(origin)?;
             let from = Self::ensure_rsa_signed(&tx)?;
             let amount = tx.tbs.amount;
             let pre_bal = Balance::get(from);
@@ -137,7 +134,7 @@ impl<T: Trait> Module<T> {
 
     pub fn increment_nonce(id: types::AccountId) -> DispatchResult {
         ensure!(Accounts::exists(id), "Account not found");
-
+        
         let mut account = Accounts::get(id);
         account.nonce += 1;
         Accounts::insert(id, account);

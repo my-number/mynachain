@@ -324,10 +324,8 @@ impl_runtime_apis! {
             block: Block,
             data: sp_inherents::InherentData,
         ) -> sp_inherents::CheckInherentsResult {
+            data.check_extrinsics(&block)
             
-            let result = data.check_extrinsics(&block);
-            print!("{:?}",result);
-            return result;
         }
 
         fn random_seed() -> <Block as BlockT>::Hash {
@@ -337,7 +335,7 @@ impl_runtime_apis! {
 
     impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
         fn validate_transaction(tx: <Block as BlockT>::Extrinsic) -> TransactionValidity {
-            Executive::validate_transaction(tx); 
+            Executive::validate_transaction(tx)
         }
     }
 
