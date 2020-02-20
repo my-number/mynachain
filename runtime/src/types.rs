@@ -1,8 +1,8 @@
+use crate::certs;
 use frame_support::dispatch::{Decode, Encode, Vec};
 use myna::crypto;
-use sp_core::{Blake2Hasher, Hasher};
 use rsa::RSAPublicKey;
-use crate::certs;
+use sp_core::{Blake2Hasher, Hasher};
 
 pub type AccountId = u64;
 pub type Signature = Vec<u8>;
@@ -18,13 +18,8 @@ pub struct Account {
     pub nonce: uNonce,
 }
 
-pub trait Signed {
-    fn get_id(&self) -> &AccountId;
-    fn get_signature(&self) -> &Signature;
-    fn verify(&self, pubkey: RSAPublicKey)->Result<(), &'static str>;
-}
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
-pub struct SignedData{
+pub struct SignedData {
     pub tbs: Tx,
     pub signature: Signature,
     pub id: AccountId,
@@ -34,39 +29,32 @@ pub enum Tx {
     CreateAccount(TxCreateAccount),
     Send(TxSend),
     Mint(TxMint),
-    Other
+    Other,
 }
 impl Default for Tx {
     fn default() -> Self {
         Tx::Other
     }
 }
-impl Signed for SignedData {
-    fn get_id(&self) -> &AccountId{
-        &self.id
-    }
-    fn get_signature(&self) -> &Signature{
-        &self.signature
-    }
-    fn verify(&self, pubkey: RSAPublicKey)->Result<(), &'static str> {
+impl SignedData {
+    fn verify(&self, pubkey: RSAPublicKey) -> Result<(), &'static str> {
         let encoded = self.tbs.encode();
         let sighash = Blake2Hasher::hash(&encoded);
-        match crypto::verify(pubkey, sighash.as_ref(), &self.signature[..]){
-            Ok(())=>return Ok(()),
-            Err(_)=>return Err("Verification failed")
+        match crypto::verify(pubkey, sighash.as_ref(), &self.signature[..]) {
+            Ok(()) => return Ok(()),
+            Err(_) => return Err("Verification failed"),
         }
     }
 }
 
-
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
 pub struct TxCreateAccount {
     pub cert: Vec<u8>,
-    pub nonce: uNonce
+    pub nonce: uNonce,
 }
 
 impl TxCreateAccount {
-    pub fn check_ca(&self) -> Result<(), &'static str>  {
+    pub fn check_ca(&self) -> Result<(), &'static str> {
         for ca in certs::auth_ca.iter() {
             if crypto::verify_cert(&self.cert[..], ca).is_ok() {
                 return Ok(());
@@ -80,11 +68,11 @@ impl TxCreateAccount {
 pub struct TxSend {
     pub to: AccountId,
     pub amount: Balance,
-    pub nonce: uNonce
+    pub nonce: uNonce,
 }
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
 pub struct TxMint {
     pub amount: Balance,
-    pub nonce: uNonce
+    pub nonce: uNonce,
 }

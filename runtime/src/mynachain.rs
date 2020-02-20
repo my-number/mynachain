@@ -1,13 +1,12 @@
 use crate::types;
-use crate::types::Signed;
 use frame_support::{
     decl_event, decl_module, decl_storage,
     dispatch::{Decode, DispatchError, DispatchResult, Encode, Vec},
     ensure,
     traits::{Currency, ExistenceRequirement},
 };
-use sp_std::vec;
 use myna::crypto;
+use sp_std::vec;
 use system::{ensure_none, ensure_signed};
 
 /// The module's configuration trait.
@@ -28,8 +27,7 @@ decl_storage! {
 }
 
 decl_event!(
-    pub enum Event
-    {
+    pub enum Event {
         AccountAdd(types::AccountId),
         Transferred(types::AccountId, types::AccountId, types::Balance),
         Minted(types::AccountId, types::Balance),
@@ -43,16 +41,6 @@ decl_module! {
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
-        pub fn always_ok(origin) -> DispatchResult {
-            Self::deposit_event(Event::AlwaysOk);
-            ensure_none(origin)?;
-            Ok(())
-        }
-        pub fn always_ok_wo_check(origin) -> DispatchResult {
-            Self::deposit_event(Event::AlwaysOk);
-            Ok(())
-        }
-        
         pub fn go(origin, tx: types::SignedData) -> DispatchResult{
             match tx.clone().tbs {
                 types::Tx::CreateAccount(t) => Self::create_account(tx, t),
@@ -61,7 +49,7 @@ decl_module! {
                 _ => Ok(())
             }
         }
-        
+
     }
 }
 
@@ -70,10 +58,10 @@ impl<T: Trait> Module<T> {
     /// nonce must be zero
     /// id must be zero
     pub fn create_account(tx: types::SignedData, tbs: types::TxCreateAccount) -> DispatchResult {
-        ensure!(tbs.nonce==0, "Nonce is not zero");
-        ensure!(tx.id==0, "Id is not zero");
+        ensure!(tbs.nonce == 0, "Nonce is not zero");
+        ensure!(tx.id == 0, "Id is not zero");
         tbs.check_ca()?;
-        
+
         let sig = &tx.signature;
         let pubkey = crypto::extract_pubkey(&tbs.cert[..]).map_err(|_| "failed to get pubkey")?;
         tx.verify(pubkey);
@@ -99,10 +87,9 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(Event::Minted(from, amount));
         Ok(())
     }
-    
+
     // module func starts here
     pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
-        
         let new_id = AccountCount::get();
         let new_account = types::Account {
             cert: cert,
@@ -116,10 +103,11 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-    pub fn ensure_rsa_signed<Tx: types::Signed>(tx: &Tx) -> Result<types::AccountId, &'static str> {
-        ensure!(Accounts::exists(tx.get_id()), "Account not found");
-        let account = Accounts::get(tx.get_id());
-        let pubkey = crypto::extract_pubkey(&account.cert[..]).map_err(|_| "failed to get pubkey")?;
+    pub fn ensure_rsa_signed(tx: &types::SignedData) -> Result<types::AccountId, &'static str> {
+        ensure!(Accounts::exists(tx.id), "Account not found");
+        let account = Accounts::get(tx.id);
+        let pubkey =
+            crypto::extract_pubkey(&account.cert[..]).map_err(|_| "failed to get pubkey")?;
         tx.verify(pubkey)?;
         Ok(account.id)
     }
@@ -146,7 +134,7 @@ impl<T: Trait> Module<T> {
 
     pub fn increment_nonce(id: types::AccountId) -> DispatchResult {
         ensure!(Accounts::exists(id), "Account not found");
-        
+
         let mut account = Accounts::get(id);
         account.nonce += 1;
         Accounts::insert(id, account);
