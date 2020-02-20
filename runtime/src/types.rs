@@ -37,7 +37,7 @@ impl Default for Tx {
     }
 }
 impl SignedData {
-    fn verify(&self, pubkey: RSAPublicKey) -> Result<(), &'static str> {
+    pub fn verify(&self, pubkey: RSAPublicKey) -> Result<(), &'static str> {
         let encoded = self.tbs.encode();
         let sighash = Blake2Hasher::hash(&encoded);
         match crypto::verify(pubkey, sighash.as_ref(), &self.signature[..]) {
