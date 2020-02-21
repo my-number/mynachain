@@ -64,14 +64,14 @@ impl<T: Trait> Module<T> {
 
         let sig = &tx.signature;
         let pubkey = crypto::extract_pubkey(&tbs.cert[..]).map_err(|_| "failed to get pubkey")?;
-        tx.verify(pubkey);
+        tx.verify(pubkey)?;
         Self::insert_account(tbs.cert)?;
         Ok(())
     }
 
     pub fn send(tx: types::SignedData, tbs: types::TxSend) -> DispatchResult {
-        let from = Self::ensure_rsa_signed(&tx)?;
         let to = tbs.to;
+        let from = Self::ensure_rsa_signed(&tx)?;
         let amount = tbs.amount;
         Self::transfer(from, to, amount)?;
         Self::increment_nonce(from)?;
