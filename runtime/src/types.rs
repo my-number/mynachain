@@ -3,7 +3,6 @@ use frame_support::dispatch::{Decode, Encode, Vec};
 use myna::crypto;
 use rsa::RSAPublicKey;
 use sp_core::{Blake2Hasher, Hasher};
-
 pub type AccountId = u64;
 pub type Signature = Vec<u8>;
 pub type uNonce = u64;
@@ -40,6 +39,7 @@ impl SignedData {
     pub fn verify(&self, pubkey: RSAPublicKey) -> Result<(), &'static str> {
         let encoded = self.tbs.encode();
         let sighash = Blake2Hasher::hash(&encoded);
+        
         match crypto::verify(pubkey, sighash.as_ref(), &self.signature[..]) {
             Ok(()) => return Ok(()),
             Err(_) => return Err("Verification failed"),

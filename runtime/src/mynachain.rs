@@ -85,6 +85,7 @@ impl<T: Trait> Module<T> {
         Balance::insert(from, new_bal);
         Self::increment_nonce(from)?;
         Self::deposit_event(Event::Minted(from, amount));
+
         Ok(())
     }
 
