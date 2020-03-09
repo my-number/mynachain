@@ -5,7 +5,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:$PATH"
 RUN rustup default stable
 RUN rustup update nightly && rustup target add wasm32-unknown-unknown --toolchain nightly
-RUN curl -fsSL https://raw.githubusercontent.com/paritytech/scripts/master/wasm-utils/install-rust-lld-ARM.sh | sh
+RUN curl -fsSL https://raw.githubusercontent.com/paritytech/scripts/master/wasm-utils/install-rust-lld-ARM.sh | bash
 ADD . /mynachain
 WORKDIR /mynachain
 RUN cargo build --release
