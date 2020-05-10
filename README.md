@@ -1,3 +1,7 @@
+# WARNING
+
+マイナンバーカードの証明書を収集することは公的個人認証法に抵触する恐れがあります。
+
 # Mynachain
 
 Mynachain node crude implementation
