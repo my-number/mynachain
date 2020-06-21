@@ -2,7 +2,8 @@ FROM ubuntu:latest
 ENV DEBIAN_FRONTEND=noninteractive
 RUN ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
 RUN apt update && apt install curl python python3 -qq -y
-RUN curl -fsSL https://raw.githubusercontent.com/paritytech/scripts/a5522fbf583e058c001604c473f9516f87650b4e/wasm-utils/install-rust-lld-ARM.sh | bash
+RUN curl -fsSL https://raw.githubusercontent.com/yuki-js/scripts/master/wasm-utils/install-rust-lld-ARM.sh | bash
 ADD . /mynachain
 WORKDIR /mynachain
 RUN cargo build --release
+CMD ["./target/release/node-template", "--dev"]
