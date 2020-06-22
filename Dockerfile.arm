@@ -3,6 +3,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
 RUN apt update && apt install curl python python3 -qq -y
 RUN curl -fsSL https://raw.githubusercontent.com/yuki-js/scripts/master/wasm-utils/install-rust-lld-ARM.sh | bash
+ENV PATH="$HOME/.cargo/bin:$PATH"
 ADD . /mynachain
 WORKDIR /mynachain
 RUN cargo build --release
