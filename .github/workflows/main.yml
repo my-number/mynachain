@@ -1,13 +1,16 @@
-name: Build Node
+name: "Build Node"
 
-
-on: [push]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
+    name: "Build"
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - uses: raftario/setup-rust-action@v1.0.0
     - name: Install Rust WASM build environment
       run: |
@@ -37,7 +40,7 @@ jobs:
       run: |
         cargo test --release
     - name: Upload binary
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: node-template
-        path target/release/node-template
+        path: target/release/node-template
