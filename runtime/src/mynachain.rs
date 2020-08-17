@@ -23,6 +23,7 @@ decl_storage! {
         AccountCount get(fn account_count): types::AccountId;
         Accounts get(fn account): map types::AccountId => types::Account;
         Balance get(fn balance): map types::AccountId => types::Balance;
+        VotedSum get(fn voted_sum): types::Balance;
     }
 }
 
@@ -31,6 +32,7 @@ decl_event!(
         AccountAdd(types::AccountId),
         Transferred(types::AccountId, types::AccountId, types::Balance),
         Minted(types::AccountId, types::Balance),
+        Voted(types::AccountId, types::Balance),
         AlwaysOk,
     }
 );
@@ -46,6 +48,7 @@ decl_module! {
                 types::Tx::CreateAccount(t) => Self::create_account(tx, t),
                 types::Tx::Send(t) => Self::send(tx, t),
                 types::Tx::Mint(t) => Self::mint(tx, t),
+                types::Tx::Vote(t) => Self::vote(tx, t),
                 _ => Ok(())
             }
         }
@@ -88,8 +91,20 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
+    pub fn vote(tx: types::SignedData, tbs: types::TxVote) -> DispatchResult {
+        let from = Self::ensure_rsa_signed(&tx)?;
+        let amount = tbs.amount;
+        let pre_bal = VotedSum::get();
+        let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
+        VotedSum::put(new_bal);
+        Self::increment_nonce(from)?;
+        Self::deposit_event(Event::Voted(from, amount));
 
-    // module func starts here
+        Ok(())
+    }
+}
+// module func starts here
+impl<T: Trait> Module<T> {
     pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
         let new_id = AccountCount::get();
         let new_account = types::Account {
