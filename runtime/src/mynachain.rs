@@ -64,7 +64,7 @@ impl<T: Trait> Module<T> {
     /// id must be zero
     pub fn create_account(tx: types::SignedData, tbs: types::TxCreateAccount) -> DispatchResult {
         ensure!(tbs.nonce == 0, "Nonce is not zero");
-        ensure!(tx.id == [0; 32], "Id is not zero");
+        
         tbs.check_ca()?;
 
         let sig = &tx.signature;
