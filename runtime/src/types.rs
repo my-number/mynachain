@@ -3,7 +3,7 @@ use frame_support::dispatch::{Decode, Encode, Vec};
 use myna::crypto;
 use rsa::RSAPublicKey;
 use sp_core::{Blake2Hasher, Hasher};
-pub type AccountId = u64;
+pub type AccountId = [u8; 32];
 pub type Signature = Vec<u8>;
 pub type Nonce = u64;
 pub type Balance = u64;
