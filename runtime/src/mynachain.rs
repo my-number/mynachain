@@ -108,7 +108,7 @@ impl<T: Trait> Module<T> {
 // module func starts here
 impl<T: Trait> Module<T> {
     pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
-        let new_account_id = Blake2Hasher::hash(&cert[..]).to_fixed_bytes();
+        let new_account_id = Blake2Hasher::hash(&cert[..]);
 
         ensure!(!Accounts::exists(new_account_id), "Account already exists");
         
