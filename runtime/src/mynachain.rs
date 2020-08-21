@@ -9,6 +9,8 @@ use myna::crypto;
 use sp_std::vec;
 use system::{ensure_none, ensure_signed};
 
+use sp_core::{Blake2Hasher, Hasher};
+
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
@@ -19,8 +21,8 @@ pub trait Trait: balances::Trait {
 // This module's storage items.
 decl_storage! {
     trait Store for Module<T: Trait> as MynaChainModule {
-
-        AccountCount get(fn account_count): types::AccountId;
+        AccountCount get(fn account_count): u64;
+        AccountEnumerator get(fn account_enum): map u64 => types::AccountId;
         Accounts get(fn account): map types::AccountId => types::Account;
         Balance get(fn balance): map types::AccountId => types::Balance;
         VotedSum get(fn voted_sum): types::Balance;
@@ -62,7 +64,7 @@ impl<T: Trait> Module<T> {
     /// id must be zero
     pub fn create_account(tx: types::SignedData, tbs: types::TxCreateAccount) -> DispatchResult {
         ensure!(tbs.nonce == 0, "Nonce is not zero");
-        ensure!(tx.id == 0, "Id is not zero");
+        
         tbs.check_ca()?;
 
         let sig = &tx.signature;
@@ -106,16 +108,22 @@ impl<T: Trait> Module<T> {
 // module func starts here
 impl<T: Trait> Module<T> {
     pub fn insert_account(cert: Vec<u8>) -> DispatchResult {
-        let new_id = AccountCount::get();
+        let new_account_id = Blake2Hasher::hash(&cert[..]);
+
+        ensure!(!Accounts::exists(new_account_id), "Account already exists");
+        
+        let new_count = AccountCount::get();
+
         let new_account = types::Account {
-            cert: cert,
-            id: new_id,
+            cert,
+            id: new_account_id,
             nonce: 0,
         };
-        Accounts::insert(new_id, new_account);
+        Accounts::insert(new_account_id, new_account);
+        AccountEnumerator::insert(new_count, new_account_id);
         AccountCount::mutate(|t| *t += 1);
 
-        Self::deposit_event(Event::AccountAdd(new_id));
+        Self::deposit_event(Event::AccountAdd(new_account_id));
 
         Ok(())
     }
