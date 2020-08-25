@@ -51,10 +51,10 @@ decl_module! {
                 types::Tx::Send(t) => Self::send(tx, t),
                 types::Tx::Mint(t) => Self::mint(tx, t),
                 types::Tx::Vote(t) => Self::vote(tx, t),
+                types::Tx::Write(t) => Self::write(tx, t),
                 _ => Ok(())
             }
         }
-
     }
 }
 
@@ -104,6 +104,13 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
+    pub fn write(tx: types::SignedData, tbs: types::TxWrite) -> DispatchResult {
+        let from = Self::ensure_rsa_signed(&tx)?;
+        let account = Acccounts::get(from);
+        account.data = tbs.data;
+        Accounts::insert(from,account);
+        OK(())
+    }
 }
 // module func starts here
 impl<T: Trait> Module<T> {
@@ -118,6 +125,7 @@ impl<T: Trait> Module<T> {
             cert,
             id: new_account_id,
             nonce: 0,
+            data: vec![],
         };
         Accounts::insert(new_account_id, new_account);
         AccountEnumerator::insert(new_count, new_account_id);
