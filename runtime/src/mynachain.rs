@@ -35,6 +35,7 @@ decl_event!(
         Transferred(types::AccountId, types::AccountId, types::Balance),
         Minted(types::AccountId, types::Balance),
         Voted(types::AccountId, types::Balance),
+        Written(types::AccountId),
         AlwaysOk,
     }
 );
@@ -64,7 +65,7 @@ impl<T: Trait> Module<T> {
     /// id must be zero
     pub fn create_account(tx: types::SignedData, tbs: types::TxCreateAccount) -> DispatchResult {
         ensure!(tbs.nonce == 0, "Nonce is not zero");
-        
+
         tbs.check_ca()?;
 
         let sig = &tx.signature;
@@ -108,7 +109,9 @@ impl<T: Trait> Module<T> {
         let from = Self::ensure_rsa_signed(&tx)?;
         let account = Acccounts::get(from);
         account.data = tbs.data;
-        Accounts::insert(from,account);
+        Accounts::insert(from, account);
+        Self::increment_nonce(from)?;
+        Self::deposit_event(Event::Written(from));
         OK(())
     }
 }
@@ -118,7 +121,7 @@ impl<T: Trait> Module<T> {
         let new_account_id = Blake2Hasher::hash(&cert[..]);
 
         ensure!(!Accounts::exists(new_account_id), "Account already exists");
-        
+
         let new_count = AccountCount::get();
 
         let new_account = types::Account {
