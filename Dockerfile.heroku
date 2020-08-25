@@ -1,6 +1,6 @@
 FROM alpine:latest
-ADD ./node-template ./node-template
+ADD ./node-template /node-template
 
-RUN chmod +x ./node-template
+RUN chmod +x /node-template
 
-CMD ./node-template --dev --ws-external --ws-port $PORT 
+CMD /node-template --dev --ws-external --ws-port $PORT 
