@@ -11,7 +11,7 @@ jobs:
     - name: Install latest nightly
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: nightly-2020-08-24
+        toolchain: nightly-2020-08-25
         override: true
         target: wasm32-unknown-unknown
     - name: Install Rust WASM build environment
