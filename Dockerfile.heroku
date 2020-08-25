@@ -1,0 +1,6 @@
+FROM alpine:latest
+ADD ./node-template ./node-template
+
+RUN chmod +x ./node-template
+
+CMD ./node-template --dev --ws-external --ws-port $PORT 
