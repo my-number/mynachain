@@ -10,6 +10,7 @@ use sp_std::vec;
 use system::{ensure_none, ensure_signed};
 
 use sp_core::{Blake2Hasher, Hasher};
+use sp_runtime::traits::CheckedDiv;
 
 pub const DISTRIBUTION_TERM: crate::BlockNumber = 10;
 pub const MAX_VOTE_BALANCE_PER_TERM: types::Balance = 10000;
@@ -48,6 +49,7 @@ decl_module! {
         fn deposit_event() = default;
 
         pub fn go(origin, tx: types::SignedData) -> DispatchResult{
+            ensure_root(origin)?;
             match tx.clone().tbs {
                 types::Tx::CreateAccount(t) => Self::create_account(tx, t),
                 types::Tx::Send(t) => Self::send(tx, t),
@@ -60,7 +62,7 @@ decl_module! {
             if block_number % DISTRIBUTION_TERM == 0{
                 let term_number = block_number / DISTRIBUTION_TERM;
                 let val_n = CumulativeVotes::get(term_number): // N th value
-                CumulativeVotes::insert(term_number+1, val_n); // a[N+1] = a[N]
+                CumulativeVotes::insert(term_number + 1, val_n); // a[N+1] = a[N]
             }
             0.into()
         }
@@ -105,11 +107,12 @@ impl<T: Trait> Module<T> {
     pub fn vote(tx: types::SignedData, tbs: types::TxVote) -> DispatchResult {
         let from = Self::ensure_rsa_signed(&tx)?;
         let amount = tbs.amount;
-        let pre_bal = Votes::get(Self::term_number()+1);
+        let term = Self::term_number() + 1;
+        let pre_bal = CumulativeVotes::get(term);
         let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
-        ensure!(new_bal <= MAX_VOTE_BALANCE_PER_TERM, "too large amoutn");
+        ensure!(new_bal <= MAX_VOTE_BALANCE_PER_TERM, "too large amount");
 
-        Votes::put(term_number, new_bal);
+        CumulativeVotes::put(term, new_bal);
         Self::increment_nonce(from)?;
         Self::deposit_event(Event::Voted(from, amount));
 
@@ -155,13 +158,15 @@ impl<T: Trait> Module<T> {
         ensure!(Accounts::exists(from), "Account not found");
         ensure!(Accounts::exists(to), "Account not found");
 
-        let pre_bal_from = compute_balance(from);
-        let new_bal_from = pre_bal_from.checked_sub(amount).ok_or("underflow")?;
-        let pre_bal_to = compute_balance(to);
-        let new_bal_to = pre_bal_to.checked_add(amount).ok_or("overflow")?;
+        compute_balance(from).checked_sub(amount).ok_or("underflow")?;
+        compute_balance(to).checked_add(amount).ok_or("overflow")?;
 
-        RawBalance::insert(from, new_bal_from);
-        RawBalance::insert(to, new_bal_to);
+        
+        let new_rawbal_to = RawBalance::get(to) - amount;
+        let new_rawbal_from = RawBalance::get(from) - amount;
+
+        RawBalance::insert(from, new_rawbal_from);
+        RawBalance::insert(to, new_rawbal_to);
         Self::deposit_event(Event::Transferred(from, to, amount));
         Ok(())
     }
@@ -184,8 +189,7 @@ impl<T: Trait> Module<T> {
         ensure!(Accounts::exists(id), "Account not found");
         let raw_bal = RawBalance::get(id);
         let confirmed_sum = Self::votes_cum(Self::term_number());
-        let account_count = Self::account_count();
-        let distributed_bal = confirmed_sum / account_count;
+        let distributed_bal = confirmed_sum;
         Ok(raw_bal + distributed_bal)
     }
 }
