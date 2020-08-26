@@ -112,7 +112,7 @@ impl<T: Trait> Module<T> {
         Accounts::insert(from, account);
         Self::increment_nonce(from)?;
         Self::deposit_event(Event::Written(from));
-        OK(())
+        Ok(())
     }
 }
 // module func starts here
