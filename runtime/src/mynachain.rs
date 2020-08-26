@@ -47,7 +47,14 @@ decl_module! {
         // Initializing events
         // this is needed only if you are using events in your module
         fn deposit_event() = default;
-
+        pub fn on_initialize(block_number: BlockNumber) -> frame_support::weights::Weight {
+            if block_number % DISTRIBUTION_TERM == 0{
+                let term_number = block_number / DISTRIBUTION_TERM;
+                let val_n = CumulativeVotes::get(term_number): // N th value
+                CumulativeVotes::insert(term_number + 1, val_n); // a[N+1] = a[N]
+            }
+            0.into()
+        }
         pub fn go(origin, tx: types::SignedData) -> DispatchResult{
             ensure_root(origin)?;
             match tx.clone().tbs {
@@ -58,14 +65,7 @@ decl_module! {
                 _ => Ok(())
             }
         }
-        pub fn on_initialize(block_number: BlockNumber) -> frame_support::weights::Weight {
-            if block_number % DISTRIBUTION_TERM == 0{
-                let term_number = block_number / DISTRIBUTION_TERM;
-                let val_n = CumulativeVotes::get(term_number): // N th value
-                CumulativeVotes::insert(term_number + 1, val_n); // a[N+1] = a[N]
-            }
-            0.into()
-        }
+
     }
 }
 
@@ -112,7 +112,7 @@ impl<T: Trait> Module<T> {
         let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
         ensure!(new_bal <= MAX_VOTE_BALANCE_PER_TERM, "too large amount");
 
-        CumulativeVotes::put(term, new_bal);
+        CumulativeVotes::insert(term, new_bal);
         Self::increment_nonce(from)?;
         Self::deposit_event(Event::Voted(from, amount));
 
@@ -158,10 +158,13 @@ impl<T: Trait> Module<T> {
         ensure!(Accounts::exists(from), "Account not found");
         ensure!(Accounts::exists(to), "Account not found");
 
-        compute_balance(from).checked_sub(amount).ok_or("underflow")?;
-        compute_balance(to).checked_add(amount).ok_or("overflow")?;
+        Self::compute_balance(from)
+            .checked_sub(amount)
+            .ok_or("underflow")?;
+        Self::compute_balance(to)
+            .checked_add(amount)
+            .ok_or("overflow")?;
 
-        
         let new_rawbal_to = RawBalance::get(to) - amount;
         let new_rawbal_from = RawBalance::get(from) - amount;
 
@@ -181,9 +184,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
     pub fn term_number() -> BlockNumber {
-        <system::Module<T>>::block_number()
-            .checked_div(DISTRIBUTION_TERM)
-            .expect("Never overflow, underflow, zerodiv, q.e.d.")
+        <system::Module<T>>::block_number() / (DISTRIBUTION_TERM)
     }
     pub fn compute_balance(id: types::AccountId) -> Result<types::Balance, &'static str> {
         ensure!(Accounts::exists(id), "Account not found");
