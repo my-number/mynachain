@@ -56,7 +56,7 @@ decl_module! {
                 types::Tx::Vote(t) => Self::vote(tx, t),
                 _ => Ok(())
             }
-        }/*
+        }
         pub fn on_initialize(block_number: BlockNumber,) -> Weight {
             if block_number % DISTRIBUTION_TERM == 0{
                 let term_number = block_number / DISTRIBUTION_TERM;
@@ -64,7 +64,7 @@ decl_module! {
                 CumulativeVotes::insert(term_number + 1, val_n); // a[N+1] = a[N]
             }
             0.into()
-        }*/
+        }
     }
 }
 
