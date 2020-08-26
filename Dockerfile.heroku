@@ -1,6 +1,7 @@
-FROM alpine:latest
+FROM debian:buster-slim
 ADD ./node-template /node-template
 
 RUN chmod +x /node-template
-
-CMD /node-template --dev --ws-external --ws-port $PORT 
+RUN ls -la 
+RUN ls -la /
+CMD ls -la / && /node-template --dev --ws-external --ws-port $PORT 
