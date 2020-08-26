@@ -59,6 +59,10 @@ decl_module! {
                 _ => Ok(())
             }
         }
+        pub fn call_init(origin) -> DispatchResult{
+            Self::on_initialize(<system::Module<T>>::block_number());
+            Ok(())
+        }
     }
 }
 
@@ -111,7 +115,7 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-    pub fn on_initialize(block_number: BlockNumber) -> Weight {
+    pub fn on_initialize(_block_number: BlockNumber) -> Weight {
         let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
         if let Ok(block_number) = block_number_result {
             if block_number % DISTRIBUTION_TERM as usize == 0 {
@@ -121,6 +125,7 @@ impl<T: Trait> Module<T> {
             }
         }
         return 0;
+    }
 
     pub fn write(tx: types::SignedData, tbs: types::TxWrite) -> DispatchResult {
         let from = Self::ensure_rsa_signed(&tx)?;
