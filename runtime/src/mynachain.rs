@@ -35,6 +35,7 @@ decl_event!(
         Transferred(types::AccountId, types::AccountId, types::Balance),
         Minted(types::AccountId, types::Balance),
         Voted(types::AccountId, types::Balance),
+        Written(types::AccountId),
         AlwaysOk,
     }
 );
@@ -51,10 +52,10 @@ decl_module! {
                 types::Tx::Send(t) => Self::send(tx, t),
                 types::Tx::Mint(t) => Self::mint(tx, t),
                 types::Tx::Vote(t) => Self::vote(tx, t),
+                types::Tx::Write(t) => Self::write(tx, t),
                 _ => Ok(())
             }
         }
-
     }
 }
 
@@ -64,7 +65,7 @@ impl<T: Trait> Module<T> {
     /// id must be zero
     pub fn create_account(tx: types::SignedData, tbs: types::TxCreateAccount) -> DispatchResult {
         ensure!(tbs.nonce == 0, "Nonce is not zero");
-        
+
         tbs.check_ca()?;
 
         let sig = &tx.signature;
@@ -104,6 +105,15 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
+    pub fn write(tx: types::SignedData, tbs: types::TxWrite) -> DispatchResult {
+        let from = Self::ensure_rsa_signed(&tx)?;
+        let mut account = Accounts::get(from);
+        account.data = tbs.data;
+        Accounts::insert(from, account);
+        Self::increment_nonce(from)?;
+        Self::deposit_event(Event::Written(from));
+        Ok(())
+    }
 }
 // module func starts here
 impl<T: Trait> Module<T> {
@@ -111,13 +121,14 @@ impl<T: Trait> Module<T> {
         let new_account_id = Blake2Hasher::hash(&cert[..]);
 
         ensure!(!Accounts::exists(new_account_id), "Account already exists");
-        
+
         let new_count = AccountCount::get();
 
         let new_account = types::Account {
             cert,
             id: new_account_id,
             nonce: 0,
+            data: vec![],
         };
         Accounts::insert(new_account_id, new_account);
         AccountEnumerator::insert(new_count, new_account_id);
