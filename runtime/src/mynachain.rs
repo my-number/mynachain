@@ -12,8 +12,9 @@ use system::{ensure_none, ensure_signed, ensure_root};
 
 use sp_core::{Blake2Hasher, Hasher};
 use sp_runtime::traits::CheckedDiv;
+use core::convert::TryInto;
 
-pub const DISTRIBUTION_TERM: crate::BlockNumber = 10;
+pub const DISTRIBUTION_TERM: BlockNumber = 10;
 pub const MAX_VOTE_BALANCE_PER_TERM: types::Balance = 10000;
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
@@ -47,7 +48,6 @@ decl_module! {
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
         
-    		#[weight = 0]
         pub fn go(origin, tx: types::SignedData) -> DispatchResult{
             match tx.clone().tbs {
                 types::Tx::CreateAccount(t) => Self::create_account(tx, t),
@@ -157,10 +157,10 @@ impl<T: Trait> Module<T> {
         ensure!(Accounts::exists(from), "Account not found");
         ensure!(Accounts::exists(to), "Account not found");
 
-        Self::compute_balance(from)
+        Self::compute_balance(from)?
             .checked_sub(amount)
             .ok_or("underflow")?;
-        Self::compute_balance(to)
+        Self::compute_balance(to)?
             .checked_add(amount)
             .ok_or("overflow")?;
 
@@ -183,7 +183,11 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
     pub fn term_number() -> BlockNumber {
-        (<system::Module<T>>::block_number() / DISTRIBUTION_TERM).into()
+        let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
+        if let Ok(block_number) = block_number_result {
+            return (block_number / DISTRIBUTION_TERM as usize ).try_into().unwrap()
+        }
+        return 0
     }
     pub fn compute_balance(id: types::AccountId) -> Result<types::Balance, &'static str> {
         ensure!(Accounts::exists(id), "Account not found");
