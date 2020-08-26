@@ -4,15 +4,15 @@ use frame_support::{
     dispatch::{Decode, DispatchError, DispatchResult, Encode, Vec},
     ensure,
     traits::{Currency, ExistenceRequirement},
-    weights::Weight
+    weights::Weight,
 };
 use myna::crypto;
 use sp_std::vec;
-use system::{ensure_none, ensure_signed, ensure_root};
+use system::{ensure_none, ensure_root, ensure_signed};
 
+use core::convert::TryInto;
 use sp_core::{Blake2Hasher, Hasher};
 use sp_runtime::traits::CheckedDiv;
-use core::convert::TryInto;
 
 pub const DISTRIBUTION_TERM: BlockNumber = 10;
 pub const MAX_VOTE_BALANCE_PER_TERM: types::Balance = 10000;
@@ -47,7 +47,7 @@ decl_module! {
     /// The module declaration.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
         fn deposit_event() = default;
-        
+
         pub fn go(origin, tx: types::SignedData) -> DispatchResult{
             match tx.clone().tbs {
                 types::Tx::CreateAccount(t) => Self::create_account(tx, t),
@@ -57,14 +57,7 @@ decl_module! {
                 _ => Ok(())
             }
         }
-        pub fn on_initialize(block_number: BlockNumber,) -> Weight {
-            if block_number % DISTRIBUTION_TERM == 0{
-                let term_number = block_number / DISTRIBUTION_TERM;
-                let val_n = CumulativeVotes::get(term_number): // N th value
-                CumulativeVotes::insert(term_number + 1, val_n); // a[N+1] = a[N]
-            }
-            0.into()
-        }
+
     }
 }
 
@@ -107,7 +100,7 @@ impl<T: Trait> Module<T> {
         let from = Self::ensure_rsa_signed(&tx)?;
         let amount = tbs.amount;
         let term = Self::term_number() + 1;
-        let pre_bal = CumulativeVotes::get(term);
+        let pre_bal = CumulativeVotes::get(term as u32);
         let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
         ensure!(new_bal <= MAX_VOTE_BALANCE_PER_TERM, "too large amount");
 
@@ -116,6 +109,17 @@ impl<T: Trait> Module<T> {
         Self::deposit_event(Event::Voted(from, amount));
 
         Ok(())
+    }
+    pub fn on_initialize(block_number: BlockNumber) -> Weight {
+        let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
+        if let Ok(block_number) = block_number_result {
+            if block_number % DISTRIBUTION_TERM as usize == 0 {
+                let term_number = block_number / DISTRIBUTION_TERM as usize;
+                let val_n = CumulativeVotes::get(term_number as u32); // N th value
+                CumulativeVotes::insert(term_number as u32 + 1, val_n); // a[N+1] = a[N]
+            }
+        }
+        return 0 as Weight;
     }
 }
 // module func starts here
@@ -185,9 +189,11 @@ impl<T: Trait> Module<T> {
     pub fn term_number() -> BlockNumber {
         let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
         if let Ok(block_number) = block_number_result {
-            return (block_number / DISTRIBUTION_TERM as usize ).try_into().unwrap()
+            return (block_number / DISTRIBUTION_TERM as usize)
+                .try_into()
+                .unwrap();
         }
-        return 0
+        return 0;
     }
     pub fn compute_balance(id: types::AccountId) -> Result<types::Balance, &'static str> {
         ensure!(Accounts::exists(id), "Account not found");
