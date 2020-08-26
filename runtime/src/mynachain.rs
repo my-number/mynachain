@@ -4,10 +4,11 @@ use frame_support::{
     dispatch::{Decode, DispatchError, DispatchResult, Encode, Vec},
     ensure,
     traits::{Currency, ExistenceRequirement},
+    weights::Weight
 };
 use myna::crypto;
 use sp_std::vec;
-use system::{ensure_none, ensure_signed};
+use system::{ensure_none, ensure_signed, ensure_root};
 
 use sp_core::{Blake2Hasher, Hasher};
 use sp_runtime::traits::CheckedDiv;
@@ -44,19 +45,10 @@ decl_event!(
 decl_module! {
     /// The module declaration.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        // Initializing events
-        // this is needed only if you are using events in your module
         fn deposit_event() = default;
-        pub fn on_initialize(block_number: BlockNumber) -> frame_support::weights::Weight {
-            if block_number % DISTRIBUTION_TERM == 0{
-                let term_number = block_number / DISTRIBUTION_TERM;
-                let val_n = CumulativeVotes::get(term_number): // N th value
-                CumulativeVotes::insert(term_number + 1, val_n); // a[N+1] = a[N]
-            }
-            0.into()
-        }
-        pub fn go(origin, tx: types::SignedData) -> DispatchResult{
-            ensure_root(origin)?;
+        
+    		#[weight = 0]
+        pub fn go(_origin, tx: types::SignedData) -> DispatchResult{
             match tx.clone().tbs {
                 types::Tx::CreateAccount(t) => Self::create_account(tx, t),
                 types::Tx::Send(t) => Self::send(tx, t),
@@ -65,7 +57,14 @@ decl_module! {
                 _ => Ok(())
             }
         }
-
+        pub fn on_initialize(block_number: BlockNumber,) -> Weight {
+            if block_number % DISTRIBUTION_TERM == 0{
+                let term_number = block_number / DISTRIBUTION_TERM;
+                let val_n = CumulativeVotes::get(term_number): // N th value
+                CumulativeVotes::insert(term_number + 1, val_n); // a[N+1] = a[N]
+            }
+            0.into()
+        }
     }
 }
 
@@ -184,7 +183,7 @@ impl<T: Trait> Module<T> {
         Ok(())
     }
     pub fn term_number() -> BlockNumber {
-        <system::Module<T>>::block_number() / (DISTRIBUTION_TERM)
+        (<system::Module<T>>::block_number() / DISTRIBUTION_TERM).into()
     }
     pub fn compute_balance(id: types::AccountId) -> Result<types::Balance, &'static str> {
         ensure!(Accounts::exists(id), "Account not found");
