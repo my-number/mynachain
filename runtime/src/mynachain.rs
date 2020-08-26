@@ -119,7 +119,7 @@ impl<T: Trait> Module<T> {
                 CumulativeVotes::insert(term_number as u32 + 1, val_n); // a[N+1] = a[N]
             }
         }
-        return 0 as Weight;
+        return 0;
     }
 }
 // module func starts here
