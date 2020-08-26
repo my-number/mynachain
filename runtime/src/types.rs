@@ -15,6 +15,7 @@ pub struct Account {
     pub cert: Vec<u8>,
     pub id: AccountId,
     pub nonce: Nonce,
+    pub data: Vec<u8>
 }
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
@@ -29,6 +30,7 @@ pub enum Tx {
     Send(TxSend),
     Mint(TxMint),
     Vote(TxVote),
+    Write(TxWrite),
     Other,
 }
 impl Default for Tx {
@@ -80,5 +82,10 @@ pub struct TxMint {
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
 pub struct TxVote {
     pub amount: Balance,
+    pub nonce: Nonce,
+}
+#[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
+pub struct TxWrite {
+    pub data: Vec<u8>,
     pub nonce: Nonce,
 }
