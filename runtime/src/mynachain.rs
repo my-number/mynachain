@@ -107,7 +107,7 @@ impl<T: Trait> Module<T> {
     }
     pub fn write(tx: types::SignedData, tbs: types::TxWrite) -> DispatchResult {
         let from = Self::ensure_rsa_signed(&tx)?;
-        let account = Accounts::get(from);
+        let mut account = Accounts::get(from);
         account.data = tbs.data;
         Accounts::insert(from, account);
         Self::increment_nonce(from)?;
