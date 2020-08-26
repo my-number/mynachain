@@ -60,8 +60,12 @@ decl_module! {
             }
         }
         pub fn call_init(origin) -> DispatchResult{
-            Self::on_initialize(<system::Module<T>>::block_number());
-            Ok(())
+            let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
+            if let Ok(block_number) = block_number_result {
+                Self::on_initialize(block_number as u32);
+                return Ok(());
+            }
+            Err("Init failed!".into())
         }
     }
 }
