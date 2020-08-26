@@ -1,16 +1,21 @@
-use crate::types;
+use crate::{types, BlockNumber};
 use frame_support::{
     decl_event, decl_module, decl_storage,
     dispatch::{Decode, DispatchError, DispatchResult, Encode, Vec},
     ensure,
     traits::{Currency, ExistenceRequirement},
+    weights::Weight,
 };
 use myna::crypto;
 use sp_std::vec;
-use system::{ensure_none, ensure_signed};
+use system::{ensure_none, ensure_root, ensure_signed};
 
+use core::convert::TryInto;
 use sp_core::{Blake2Hasher, Hasher};
+use sp_runtime::traits::CheckedDiv;
 
+pub const DISTRIBUTION_TERM: BlockNumber = 10;
+pub const MAX_VOTE_BALANCE_PER_TERM: types::Balance = 10000;
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
     // TODO: Add other types and constants required configure this module.
@@ -24,8 +29,8 @@ decl_storage! {
         AccountCount get(fn account_count): u64;
         AccountEnumerator get(fn account_enum): map u64 => types::AccountId;
         Accounts get(fn account): map types::AccountId => types::Account;
-        Balance get(fn balance): map types::AccountId => types::Balance;
-        VotedSum get(fn voted_sum): types::Balance;
+        RawBalance get(fn balance): map types::AccountId => types::Balance;
+        CumulativeVotes get(fn votes_cum): map BlockNumber => types::Balance; // 投票の累積和。ちなみにゲッターのcumはCumulativeのprefixです。念の為。
     }
 }
 
@@ -42,8 +47,6 @@ decl_event!(
 decl_module! {
     /// The module declaration.
     pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-        // Initializing events
-        // this is needed only if you are using events in your module
         fn deposit_event() = default;
 
         pub fn go(origin, tx: types::SignedData) -> DispatchResult{
@@ -86,9 +89,9 @@ impl<T: Trait> Module<T> {
     pub fn mint(tx: types::SignedData, tbs: types::TxMint) -> DispatchResult {
         let from = Self::ensure_rsa_signed(&tx)?;
         let amount = tbs.amount;
-        let pre_bal = Balance::get(from);
+        let pre_bal = RawBalance::get(from);
         let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
-        Balance::insert(from, new_bal);
+        RawBalance::insert(from, new_bal);
         Self::increment_nonce(from)?;
         Self::deposit_event(Event::Minted(from, amount));
 
@@ -97,14 +100,28 @@ impl<T: Trait> Module<T> {
     pub fn vote(tx: types::SignedData, tbs: types::TxVote) -> DispatchResult {
         let from = Self::ensure_rsa_signed(&tx)?;
         let amount = tbs.amount;
-        let pre_bal = VotedSum::get();
+        let term = Self::term_number() + 1;
+        let pre_bal = CumulativeVotes::get(term as u32);
         let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
-        VotedSum::put(new_bal);
+        ensure!(new_bal <= MAX_VOTE_BALANCE_PER_TERM, "too large amount");
+
+        CumulativeVotes::insert(term, new_bal);
         Self::increment_nonce(from)?;
         Self::deposit_event(Event::Voted(from, amount));
 
         Ok(())
     }
+    pub fn on_initialize(block_number: BlockNumber) -> Weight {
+        let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
+        if let Ok(block_number) = block_number_result {
+            if block_number % DISTRIBUTION_TERM as usize == 0 {
+                let term_number = block_number / DISTRIBUTION_TERM as usize;
+                let val_n = CumulativeVotes::get(term_number as u32); // N th value
+                CumulativeVotes::insert(term_number as u32 + 1, val_n); // a[N+1] = a[N]
+            }
+        }
+        return 0;
+
     pub fn write(tx: types::SignedData, tbs: types::TxWrite) -> DispatchResult {
         let from = Self::ensure_rsa_signed(&tx)?;
         let mut account = Accounts::get(from);
@@ -155,14 +172,18 @@ impl<T: Trait> Module<T> {
         ensure!(Accounts::exists(from), "Account not found");
         ensure!(Accounts::exists(to), "Account not found");
 
-        let pre_bal_from = Balance::get(from);
-        let new_bal_from = pre_bal_from.checked_sub(amount).ok_or("overflow")?;
+        Self::compute_balance(from)?
+            .checked_sub(amount)
+            .ok_or("underflow")?;
+        Self::compute_balance(to)?
+            .checked_add(amount)
+            .ok_or("overflow")?;
 
-        let pre_bal_to = Balance::get(to);
-        let new_bal_to = pre_bal_to.checked_add(amount).ok_or("overflow")?;
+        let new_rawbal_to = RawBalance::get(to) - amount;
+        let new_rawbal_from = RawBalance::get(from) - amount;
 
-        Balance::insert(from, new_bal_from);
-        Balance::insert(to, new_bal_to);
+        RawBalance::insert(from, new_rawbal_from);
+        RawBalance::insert(to, new_rawbal_to);
         Self::deposit_event(Event::Transferred(from, to, amount));
         Ok(())
     }
@@ -175,6 +196,22 @@ impl<T: Trait> Module<T> {
         Accounts::insert(id, account);
 
         Ok(())
+    }
+    pub fn term_number() -> BlockNumber {
+        let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
+        if let Ok(block_number) = block_number_result {
+            return (block_number / DISTRIBUTION_TERM as usize)
+                .try_into()
+                .unwrap();
+        }
+        return 0;
+    }
+    pub fn compute_balance(id: types::AccountId) -> Result<types::Balance, &'static str> {
+        ensure!(Accounts::exists(id), "Account not found");
+        let raw_bal = RawBalance::get(id);
+        let confirmed_sum = Self::votes_cum(Self::term_number());
+        let distributed_bal = confirmed_sum;
+        Ok(raw_bal + distributed_bal)
     }
 }
 

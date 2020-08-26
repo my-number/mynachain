@@ -6,7 +6,7 @@ use sp_core::{Blake2Hasher, Hasher, H256};
 pub type AccountId = H256;
 pub type Signature = Vec<u8>;
 pub type Nonce = u64;
-pub type Balance = u64;
+pub type Balance = i128;
 
 /// The struct of individual account
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
