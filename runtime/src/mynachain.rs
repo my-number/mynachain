@@ -1,4 +1,4 @@
-use crate::{types, BlockNumber};
+use crate::{types};
 use frame_support::{
     decl_event, decl_module, decl_storage,
     dispatch::{Decode, DispatchError, DispatchResult, Encode, Vec},
@@ -14,7 +14,6 @@ use core::convert::TryInto;
 use sp_core::{Blake2Hasher, Hasher};
 use sp_runtime::traits::CheckedDiv;
 
-pub const DISTRIBUTION_TERM: BlockNumber = 10;
 pub const MAX_VOTE_BALANCE_PER_TERM: types::Balance = 10000;
 /// The module's configuration trait.
 pub trait Trait: balances::Trait {
@@ -30,7 +29,8 @@ decl_storage! {
         AccountEnumerator get(fn account_enum): map u64 => types::AccountId;
         Accounts get(fn account): map types::AccountId => types::Account;
         RawBalance get(fn balance): map types::AccountId => types::Balance;
-        CumulativeVotes get(fn votes_cum): map BlockNumber => types::Balance; // 投票の累積和。ちなみにゲッターのcumはCumulativeのprefixです。念の為。
+        TermNumber get(fn term_number): types::TermNumber;
+        CumulativeVotes get(fn votes_cum): map types::TermNumber => types::Balance; // 投票の累積和。ちなみにゲッターのcumはCumulativeのprefixです。念の為。
     }
 }
 
@@ -41,6 +41,7 @@ decl_event!(
         Minted(types::AccountId, types::Balance),
         Voted(types::AccountId, types::Balance),
         Written(types::AccountId),
+        NextTerm(types::TermNumber),
         AlwaysOk,
     }
 );
@@ -56,16 +57,9 @@ decl_module! {
                 types::Tx::Mint(t) => Self::mint(tx, t),
                 types::Tx::Vote(t) => Self::vote(tx, t),
                 types::Tx::Write(t) => Self::write(tx, t),
+                types::Tx::NextTerm(t) => Self::next_term(tx,t),
                 _ => Ok(())
             }
-        }
-        pub fn call_init(origin) -> DispatchResult{
-            let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
-            if let Ok(block_number) = block_number_result {
-                Self::on_initialize(block_number as u32);
-                return Ok(());
-            }
-            Err("Init failed!".into())
         }
     }
 }
@@ -119,16 +113,17 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-    pub fn on_initialize(_block_number: BlockNumber) -> Weight {
-        let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
-        if let Ok(block_number) = block_number_result {
-            if block_number % DISTRIBUTION_TERM as usize == 0 {
-                let term_number = block_number / DISTRIBUTION_TERM as usize;
-                let val_n = CumulativeVotes::get(term_number as u32); // N th value
-                CumulativeVotes::insert(term_number as u32 + 1, val_n); // a[N+1] = a[N]
-            }
-        }
-        return 0;
+    pub fn next_term(tx: types::SignedData, tbs: types::TxNextTerm) -> DispatchResult {
+        let from = Self::ensure_rsa_signed(&tx)?;
+        let cur_term = TermNumber::get();
+        let new_term = cur_term + 1;
+        
+        let final_votes = CumulativeVotes::get(cur_term);
+        CumulativeVotes::insert(new_term, final_votes);
+        
+        TermNumber::put(new_term);
+        Self::deposit_event(Event::NextTerm(new_term));
+        Ok(())
     }
 
     pub fn write(tx: types::SignedData, tbs: types::TxWrite) -> DispatchResult {
@@ -155,6 +150,7 @@ impl<T: Trait> Module<T> {
             id: new_account_id,
             nonce: 0,
             data: vec![],
+            created_at: Self::term_number()
         };
         Accounts::insert(new_account_id, new_account);
         AccountEnumerator::insert(new_count, new_account_id);
@@ -206,20 +202,12 @@ impl<T: Trait> Module<T> {
 
         Ok(())
     }
-    pub fn term_number() -> BlockNumber {
-        let block_number_result: Result<usize, _> = <system::Module<T>>::block_number().try_into();
-        if let Ok(block_number) = block_number_result {
-            return (block_number / DISTRIBUTION_TERM as usize)
-                .try_into()
-                .unwrap();
-        }
-        return 0;
-    }
     pub fn compute_balance(id: types::AccountId) -> Result<types::Balance, &'static str> {
         ensure!(Accounts::exists(id), "Account not found");
+        let created_at = Accounts::get(id).created_at;
         let raw_bal = RawBalance::get(id);
         let confirmed_sum = Self::votes_cum(Self::term_number());
-        let distributed_bal = confirmed_sum;
+        let distributed_bal = confirmed_sum - Self::votes_cum(created_at);
         Ok(raw_bal + distributed_bal)
     }
 }

@@ -7,6 +7,7 @@ pub type AccountId = H256;
 pub type Signature = Vec<u8>;
 pub type Nonce = u64;
 pub type Balance = i128;
+pub type TermNumber = u32;
 
 /// The struct of individual account
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
@@ -15,7 +16,8 @@ pub struct Account {
     pub cert: Vec<u8>,
     pub id: AccountId,
     pub nonce: Nonce,
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
+    pub created_at: TermNumber,
 }
 
 #[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
@@ -31,6 +33,7 @@ pub enum Tx {
     Mint(TxMint),
     Vote(TxVote),
     Write(TxWrite),
+    NextTerm(TxNextTerm),
     Other,
 }
 impl Default for Tx {
@@ -89,3 +92,8 @@ pub struct TxWrite {
     pub data: Vec<u8>,
     pub nonce: Nonce,
 }
+#[derive(Encode, Decode, Default, Clone, PartialEq, Debug)]
+pub struct TxNextTerm {
+    pub nonce: Nonce,
+}
+
