@@ -102,7 +102,7 @@ impl<T: Trait> Module<T> {
     pub fn vote(tx: types::SignedData, tbs: types::TxVote) -> DispatchResult {
         let from = Self::ensure_rsa_signed(&tx)?;
         let amount = tbs.amount;
-        let term = Self::term_number() + 1;
+        let term = Self::term_number();
         let pre_bal = CumulativeVotes::get(term as u32);
         let new_bal = pre_bal.checked_add(amount).ok_or("overflow")?;
         ensure!(new_bal <= MAX_VOTE_BALANCE_PER_TERM, "too large amount");
@@ -115,7 +115,7 @@ impl<T: Trait> Module<T> {
     }
     pub fn next_term(tx: types::SignedData, tbs: types::TxNextTerm) -> DispatchResult {
         let from = Self::ensure_rsa_signed(&tx)?;
-        let cur_term = TermNumber::get();
+        let cur_term = Self::term_number();
         let new_term = cur_term + 1;
         
         let final_votes = CumulativeVotes::get(cur_term);
