@@ -177,14 +177,15 @@ impl<T: Trait> Module<T> {
         ensure!(Accounts::exists(from), "Account not found");
         ensure!(Accounts::exists(to), "Account not found");
 
-        Self::compute_balance(from)?
+        let new_compbal_from = Self::compute_balance(from)?
             .checked_sub(amount)
             .ok_or("underflow")?;
+        ensure!(new_compbal_from >= 0, "Insufficient Balance");
         Self::compute_balance(to)?
             .checked_add(amount)
-            .ok_or("overflow")?;
+            .ok_or("Overflow")?;
 
-        let new_rawbal_to = RawBalance::get(to) - amount;
+        let new_rawbal_to = RawBalance::get(to) + amount;
         let new_rawbal_from = RawBalance::get(from) - amount;
 
         RawBalance::insert(from, new_rawbal_from);

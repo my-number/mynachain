@@ -2,6 +2,4 @@ FROM debian:buster-slim
 ADD ./node-template /node-template
 
 RUN chmod +x /node-template
-RUN ls -la 
-RUN ls -la /
-CMD ls -la / && /node-template --dev --ws-external --ws-port $PORT 
+CMD /node-template --dev --ws-external --ws-port $PORT -lruntime=DEBUG
