@@ -43,33 +43,6 @@ jobs:
         name: node-template
         path: target/release/node-template
 
-  docker-ecr:
-    name: "Upload to ECR"
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-    - uses: actions/checkout@v2
-    - name: Download binary
-      uses: actions/download-artifact@v2
-      with:
-        name: node-template
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-    - name: build
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPO_NAME }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$GITHUB_SHA
-
   docker-heroku:
     name: "Deploy to Heroku"
     runs-on: ubuntu-latest
